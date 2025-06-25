@@ -4,7 +4,7 @@ import { LoginRequest, LoginResponse, DashboardResponse } from '@/types/api';
 const BASE_URL = 'http://110.34.2.30:5013';
 
 class ApiService {
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -63,9 +63,49 @@ class ApiService {
     return this.request('/products/getAllProducts');
   }
 
+  async createProduct(data: any) {
+    return this.request('/products/create-product', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProduct(data: any) {
+    return this.request('/products/updateProduct', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProduct(id: number) {
+    return this.request(`/products/hardDeleteProduct?productId=${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Categories
   async getCategories() {
     return this.request('/category/getAllCategories');
+  }
+
+  async createCategory(data: any) {
+    return this.request('/category/create-category', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCategory(data: any) {
+    return this.request('/category/updateCategory', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCategory(id: number) {
+    return this.request(`/category/deleteCategory?categoryId=${id}`, {
+      method: 'DELETE',
+    });
   }
 
   // Orders
@@ -73,9 +113,29 @@ class ApiService {
     return this.request('/Order/getAllOrder');
   }
 
+  async updateOrderStatus(orderId: number, status: string) {
+    return this.request('/Order/confirmOrderStatus', {
+      method: 'PUT',
+      body: JSON.stringify({ orderId, orderStatus: status }),
+    });
+  }
+
   // Users
   async getUsers() {
     return this.request('/users/getAllUsers');
+  }
+
+  async updateUser(data: any) {
+    return this.request('/users/updateUser', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteUser(id: number) {
+    return this.request(`/users/deleteUser?userId=${id}`, {
+      method: 'DELETE',
+    });
   }
 
   // Stores
@@ -83,9 +143,36 @@ class ApiService {
     return this.request('/store/getAllStores');
   }
 
+  async createStore(data: any) {
+    return this.request('/store/create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStore(data: any) {
+    return this.request('/store/updateStore', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteStore(id: number) {
+    return this.request(`/store/hardDeleteStore?storeId=${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Payment Requests
   async getPaymentRequests() {
     return this.request('/payment/requests');
+  }
+
+  async updatePaymentStatus(paymentRequestId: number, status: string) {
+    return this.request('/payment/updatePaymentStatus', {
+      method: 'PUT',
+      body: JSON.stringify({ paymentRequestId, paymentStatus: status }),
+    });
   }
 }
 

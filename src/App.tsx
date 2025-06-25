@@ -5,10 +5,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Layout } from "@/components/layout/Layout";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
 import { Unauthorized } from "@/pages/Unauthorized";
+import { Products } from "@/pages/Products";
+import { Categories } from "@/pages/Categories";
+import { Orders } from "@/pages/Orders";
+import { Users } from "@/pages/Users";
+import { Stores } from "@/pages/Stores";
+import { Payments } from "@/pages/Payments";
+import { Settings } from "@/pages/Settings";
+import { Notifications } from "@/pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,97 +36,91 @@ const App = () => (
             <Route
               path="/dashboard"
               element={
-                <Layout>
-                  <Dashboard />
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/products"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Products</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Products />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/categories"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Categories</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Categories />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/orders"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Orders</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Orders />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/users"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Users</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Users />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/stores"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Stores</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Stores />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/payments"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Payments</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Payments />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/notifications"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Notifications</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Notifications />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route
               path="/settings"
               element={
-                <Layout>
-                  <div className="text-center py-12">
-                    <h1 className="text-2xl font-bold">Settings</h1>
-                    <p className="text-gray-600">Coming soon...</p>
-                  </div>
-                </Layout>
+                <ProtectedRoute>
+                  <Layout>
+                    <Settings />
+                  </Layout>
+                </ProtectedRoute>
               }
             />
             <Route path="*" element={<NotFound />} />

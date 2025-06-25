@@ -13,6 +13,45 @@ import {
   TrendingUp,
   TrendingDown
 } from 'lucide-react';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+
+const chartConfig = {
+  sales: {
+    label: "Sales",
+    color: "hsl(var(--chart-1))",
+  },
+  orders: {
+    label: "Orders",
+    color: "hsl(var(--chart-2))",
+  },
+  users: {
+    label: "Users",
+    color: "hsl(var(--chart-3))",
+  },
+};
+
+const salesData = [
+  { month: "Jan", sales: 12000, orders: 45 },
+  { month: "Feb", sales: 19000, orders: 52 },
+  { month: "Mar", sales: 15000, orders: 48 },
+  { month: "Apr", sales: 25000, orders: 61 },
+  { month: "May", sales: 22000, orders: 55 },
+  { month: "Jun", sales: 30000, orders: 67 },
+];
 
 export const Dashboard: React.FC = () => {
   const { data: dashboardData, isLoading, error } = useQuery({
@@ -95,7 +134,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">InstantMart Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here's what's happening with your store.</p>
       </div>
 
@@ -115,6 +154,50 @@ export const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales Trend</CardTitle>
+            <CardDescription>Monthly sales performance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <LineChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line 
+                  type="monotone" 
+                  dataKey="sales" 
+                  stroke="var(--color-sales)" 
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Orders Overview</CardTitle>
+            <CardDescription>Monthly order statistics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <BarChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="orders" fill="var(--color-orders)" />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}
