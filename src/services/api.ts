@@ -59,117 +59,117 @@ class ApiService {
   }
 
   // Products
-  async getProducts() {
-    return this.request('/products/getAllProducts');
+  async getProducts(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/products/getAllProducts');
   }
 
-  async createProduct(data: any) {
-    return this.request('/products/create-product', {
+  async createProduct(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/products/create-product', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateProduct(data: any) {
-    return this.request('/products/updateProduct', {
+  async updateProduct(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/products/updateProduct', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteProduct(id: number) {
-    return this.request(`/products/hardDeleteProduct?productId=${id}`, {
+  async deleteProduct(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/products/hardDeleteProduct?productId=${id}`, {
       method: 'DELETE',
     });
   }
 
   // Categories
-  async getCategories() {
-    return this.request('/category/getAllCategories');
+  async getCategories(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/category/getAllCategories');
   }
 
-  async createCategory(data: any) {
-    return this.request('/category/create-category', {
+  async createCategory(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/category/create-category', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateCategory(data: any) {
-    return this.request('/category/updateCategory', {
+  async updateCategory(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/category/updateCategory', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteCategory(id: number) {
-    return this.request(`/category/deleteCategory?categoryId=${id}`, {
+  async deleteCategory(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/category/deleteCategory?categoryId=${id}`, {
       method: 'DELETE',
     });
   }
 
   // Orders
-  async getOrders() {
-    return this.request('/Order/getAllOrder');
+  async getOrders(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/Order/getAllOrder');
   }
 
-  async updateOrderStatus(orderId: number, status: string) {
-    return this.request('/Order/confirmOrderStatus', {
+  async updateOrderStatus(orderId: number, status: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/Order/confirmOrderStatus', {
       method: 'PUT',
       body: JSON.stringify({ orderId, orderStatus: status }),
     });
   }
 
   // Users
-  async getUsers() {
-    return this.request('/users/getAllUsers');
+  async getUsers(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/users/getAllUsers');
   }
 
-  async updateUser(data: any) {
-    return this.request('/users/updateUser', {
+  async updateUser(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/users/updateUser', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteUser(id: number) {
-    return this.request(`/users/deleteUser?userId=${id}`, {
+  async deleteUser(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/users/deleteUser?userId=${id}`, {
       method: 'DELETE',
     });
   }
 
   // Stores
-  async getStores() {
-    return this.request('/store/getAllStores');
+  async getStores(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/store/getAllStores');
   }
 
-  async createStore(data: any) {
-    return this.request('/store/create', {
+  async createStore(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/store/create', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateStore(data: any) {
-    return this.request('/store/updateStore', {
+  async updateStore(data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/store/updateStore', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteStore(id: number) {
-    return this.request(`/store/hardDeleteStore?storeId=${id}`, {
+  async deleteStore(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/store/hardDeleteStore?storeId=${id}`, {
       method: 'DELETE',
     });
   }
 
   // Payment Requests
-  async getPaymentRequests() {
-    return this.request('/payment/requests');
+  async getPaymentRequests(): Promise<{ data: any[] }> {
+    return this.request<{ data: any[] }>('/payment/requests');
   }
 
-  async updatePaymentStatus(paymentRequestId: number, status: string) {
-    return this.request('/payment/updatePaymentStatus', {
+  async updatePaymentStatus(paymentRequestId: number, status: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/payment/updatePaymentStatus', {
       method: 'PUT',
       body: JSON.stringify({ paymentRequestId, paymentStatus: status }),
     });
