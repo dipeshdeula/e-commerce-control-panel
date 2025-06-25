@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('deuladipesh94@gmail.com'); // Pre-fill for testing
+  const [password, setPassword] = useState('Dipesh@123'); // Pre-fill for testing
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { login, user } = useAuth();
@@ -25,8 +25,11 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
+    console.log('Form submitted with:', { email, password });
+    
     try {
       await login(email, password);
+      console.log('Login successful, redirecting...');
     } catch (error) {
       console.error('Login failed:', error);
     } finally {
@@ -76,6 +79,11 @@ export const Login: React.FC = () => {
                 {isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
+            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+              <p><strong>Test Credentials:</strong></p>
+              <p>Email: deuladipesh94@gmail.com</p>
+              <p>Password: Dipesh@123</p>
+            </div>
           </CardContent>
         </Card>
       </div>

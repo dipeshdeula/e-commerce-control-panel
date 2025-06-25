@@ -8,7 +8,7 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('accessToken');
     
     const config: RequestInit = {
       headers: {
@@ -19,17 +19,28 @@ class ApiService {
       ...options,
     };
 
+    console.log(`Making request to: ${BASE_URL}${endpoint}`);
+    console.log('Request config:', config);
+
     const response = await fetch(`${BASE_URL}${endpoint}`, config);
     
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
     
-    return response.json();
+    const data = await response.json();
+    console.log('Response data:', data);
+    return data;
   }
 
   // Auth
   async login(credentials: LoginRequest): Promise<LoginResponse> {
+    console.log('Attempting login with:', credentials);
     return this.request<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),

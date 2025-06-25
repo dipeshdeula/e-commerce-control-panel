@@ -6,8 +6,11 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string;
-  user: UserDTO;
+  success: boolean;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  message: string;
 }
 
 export interface UserDTO {

@@ -14,6 +14,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to decode JWT token
+const decodeJWT = (token: string): any => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserDTO | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -21,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('user');
     
     if (storedToken && storedUser) {
@@ -34,22 +49,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Login attempt for:', email);
+      
       const response = await apiService.login({ email, password });
+      console.log('Login response:', response);
       
-      setToken(response.token);
-      setUser(response.user);
-      
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
-      });
-    } catch (error) {
+      if (response.success && response.accessToken) {
+        // Decode the JWT to extract user information
+        const decodedToken = decodeJWT(response.accessToken);
+        console.log('Decoded token:', decodedToken);
+        
+        if (decodedToken) {
+          const userData: UserDTO = {
+            userId: parseInt(decodedToken.nameid) || 0,
+            name: decodedToken.unique_name || 'Unknown',
+            email: decodedToken.email || email,
+            role: decodedToken.role || 'User',
+          };
+          
+          setToken(response.accessToken);
+          setUser(userData);
+          
+          localStorage.setItem('accessToken', response.accessToken);
+          localStorage.setItem('refreshToken', response.refreshToken);
+          localStorage.setItem('user', JSON.stringify(userData));
+          
+          toast({
+            title: "Login Successful",
+            description: response.message || "Welcome back!",
+          });
+        } else {
+          throw new Error('Failed to decode token');
+        }
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Login Failed",
-        description: "Invalid credentials. Please try again.",
+        description: error.message || "Invalid credentials. Please try again.",
         variant: "destructive",
       });
       throw error;
@@ -61,7 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     
     toast({
