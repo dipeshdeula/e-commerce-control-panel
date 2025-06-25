@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Layout } from "@/components/layout/Layout";
 import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
@@ -28,116 +27,97 @@ const App = () => (
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <Dashboard />
+                </Layout>
               }
             />
-            {/* Placeholder routes for other modules */}
             <Route
               path="/products"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Products</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Products</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/categories"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Categories</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Categories</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/orders"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Orders</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Orders</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/users"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Users</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Users</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/stores"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Stores</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Stores</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/payments"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Payments</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Payments</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/notifications"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Notifications</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Notifications</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route
               path="/settings"
               element={
-                <ProtectedRoute>
-                  <Layout>
-                    <div className="text-center py-12">
-                      <h1 className="text-2xl font-bold">Settings</h1>
-                      <p className="text-gray-600">Coming soon...</p>
-                    </div>
-                  </Layout>
-                </ProtectedRoute>
+                <Layout>
+                  <div className="text-center py-12">
+                    <h1 className="text-2xl font-bold">Settings</h1>
+                    <p className="text-gray-600">Coming soon...</p>
+                  </div>
+                </Layout>
               }
             />
             <Route path="*" element={<NotFound />} />
