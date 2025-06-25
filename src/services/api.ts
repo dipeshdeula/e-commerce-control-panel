@@ -1,7 +1,17 @@
+import { 
+  LoginRequest, 
+  LoginResponse, 
+  DashboardResponse, 
+  UpdateUserRoleRequest, 
+  UpdateUserRoleResponse, 
+  UserListResponse,
+  RegisterRequest,
+  RegisterResponse,
+  VerifyOTPRequest,
+  VerifyOTPResponse
+} from '@/types/api';
 
-import { LoginRequest, LoginResponse, DashboardResponse } from '@/types/api';
-
-const BASE_URL = 'http://110.34.2.30:5013';
+export const BASE_URL = 'http://110.34.2.30:5013';
 
 class ApiService {
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -44,15 +54,15 @@ class ApiService {
     });
   }
 
-  async register(data: { name: string; email: string; password: string; contact: string }): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/auth/register', {
+  async register(data: RegisterRequest): Promise<RegisterResponse> {
+    return this.request<RegisterResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async verifyOtp(data: { email: string; otp: string }): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/auth/verify-otp', {
+  async verifyOtp(data: VerifyOTPRequest): Promise<VerifyOTPResponse> {
+    return this.request<VerifyOTPResponse>('/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -86,15 +96,15 @@ class ApiService {
   }
 
   // User endpoints
-  async getUsers(pageNumber: number = 1, pageSize: number = 10): Promise<{ message: string; data: any[] }> {
-    return this.request<{ message: string; data: any[] }>(`/user/getUsers?PageNumber=${pageNumber}&PageSize=${pageSize}`);
+  async getUsers(pageNumber: number = 1, pageSize: number = 10): Promise<UserListResponse> {
+    return this.request<UserListResponse>(`/user/getUsers?PageNumber=${pageNumber}&PageSize=${pageSize}`);
   }
 
   async uploadUserImage(userId: number, file: File): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    
-    return this.request<{ message: string }>(`/user/upload?userId=${userId}`, {
+
+    return this.request<{ message: string }>(`/user/${userId}/image`, {
       method: 'POST',
       headers: {},
       body: formData,
@@ -102,26 +112,26 @@ class ApiService {
   }
 
   async updateUser(id: number, data: { name: string; email: string; password?: string; contact: string }): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/user/updateUser?id=${id}`, {
+    return this.request<{ message: string }>(`/user/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
   async softDeleteUser(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/user/softDeleteUser?id=${id}`, {
+    return this.request<{ message: string }>(`${BASE_URL}/user/softDeleteUser?${id}`, {
       method: 'DELETE',
     });
   }
 
   async unDeleteUser(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/user/undeleteUser?id=${id}`, {
-      method: 'POST',
+    return this.request<{ message: string }>(`/user/unDeleteUser?${id}`, {
+      method: 'PUT',
     });
   }
 
   async hardDeleteUser(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/user/hardDeleteUser?id=${id}`, {
+    return this.request<{ message: string }>(`/user/hardDeleteUser?${id}`, {
       method: 'DELETE',
     });
   }
@@ -274,6 +284,14 @@ class ApiService {
     return this.request<{ message: string }>('/payment/updatePaymentStatus', {
       method: 'PUT',
       body: JSON.stringify({ paymentRequestId, paymentStatus: status }),
+    });
+  }
+
+  // User role management
+  async updateUserRole(userId: number, role: number): Promise<UpdateUserRoleResponse> {
+    return this.request<UpdateUserRoleResponse>(`/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
     });
   }
 }

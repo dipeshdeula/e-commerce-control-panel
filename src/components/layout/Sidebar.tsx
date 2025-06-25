@@ -16,8 +16,9 @@ import {
   FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { RoleManager } from '@/components/ui/role-manager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,7 +85,9 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
       
-      <div className="px-4 py-4 border-t border-gray-200">
+      <div className="px-4 py-4 border-t border-gray-200 space-y-2">
+        <RoleManager />
+        
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
