@@ -18,6 +18,8 @@ import { Stores } from "@/pages/Stores";
 import { Payments } from "@/pages/Payments";
 import { Settings } from "@/pages/Settings";
 import { Notifications } from "@/pages/Notifications";
+import { CompanyInfo } from "@/pages/CompanyInfo";
+import { Reports } from "@/pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,11 +46,11 @@ const App = () => (
               }
             />
             <Route
-              path="/products"
+              path="/users"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <Products />
+                    <Users />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -64,6 +66,16 @@ const App = () => (
               }
             />
             <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Products />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/orders"
               element={
                 <ProtectedRoute>
@@ -74,21 +86,11 @@ const App = () => (
               }
             />
             <Route
-              path="/users"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Users />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/stores"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <Stores />
+                    <Stories />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -99,6 +101,26 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Payments />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/company-info"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CompanyInfo />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Reports />
                   </Layout>
                 </ProtectedRoute>
               }

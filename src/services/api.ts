@@ -4,10 +4,7 @@ import { LoginRequest, LoginResponse, DashboardResponse } from '@/types/api';
 const BASE_URL = 'http://110.34.2.30:5013';
 
 class ApiService {
-  async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = localStorage.getItem('accessToken');
     
     const config: RequestInit = {
@@ -38,7 +35,7 @@ class ApiService {
     return data;
   }
 
-  // Auth
+  // Auth endpoints
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     console.log('Attempting login with:', credentials);
     return this.request<LoginResponse>('/auth/login', {
@@ -47,9 +44,160 @@ class ApiService {
     });
   }
 
-  async logout(): Promise<void> {
+  async register(data: { name: string; email: string; password: string; contact: string }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async verifyOtp(data: { email: string; otp: string }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
+    return this.request<{ accessToken: string }>('/auth/refresh-token', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    });
+  }
+
+  async forgotPassword(data: { email: string; newPassword: string }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async verifyOtpResetPassword(email: string, otp: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/auth/verify-otp-reset-password?email=${encodeURIComponent(email)}&otp=${otp}`, {
+      method: 'POST',
+    });
+  }
+
+  async logout(refreshToken: string): Promise<void> {
     return this.request<void>('/auth/logout', {
       method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    });
+  }
+
+  // User endpoints
+  async getUsers(pageNumber: number = 1, pageSize: number = 10): Promise<{ message: string; data: any[] }> {
+    return this.request<{ message: string; data: any[] }>(`/user/getUsers?PageNumber=${pageNumber}&PageSize=${pageSize}`);
+  }
+
+  async uploadUserImage(userId: number, file: File): Promise<{ message: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.request<{ message: string }>(`/user/upload?userId=${userId}`, {
+      method: 'POST',
+      headers: {},
+      body: formData,
+    });
+  }
+
+  async updateUser(id: number, data: { name: string; email: string; password?: string; contact: string }): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/user/updateUser?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async softDeleteUser(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/user/softDeleteUser?id=${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async unDeleteUser(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/user/undeleteUser?id=${id}`, {
+      method: 'POST',
+    });
+  }
+
+  async hardDeleteUser(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/user/hardDeleteUser?id=${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Category endpoints
+  async getCategories(pageNumber: number = 1, pageSize: number = 10): Promise<{ message: string; data: any[] }> {
+    return this.request<{ message: string; data: any[] }>(`/category/getAllCategory?PageNumber=${pageNumber}&PageSize=${pageSize}`);
+  }
+
+  async createCategory(formData: FormData): Promise<{ message: string; data: any }> {
+    return this.request<{ message: string; data: any }>('/category/create', {
+      method: 'POST',
+      headers: {},
+      body: formData,
+    });
+  }
+
+  async updateCategory(categoryId: number, formData: FormData): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/category/updateCategory?CategoryId=${categoryId}`, {
+      method: 'PUT',
+      headers: {},
+      body: formData,
+    });
+  }
+
+  async softDeleteCategory(categoryId: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/category/softDeleteCategory?categoryId=${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async unDeleteCategory(categoryId: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/category/unDeleteCategory?categoryId=${categoryId}`, {
+      method: 'POST',
+    });
+  }
+
+  async hardDeleteCategory(categoryId: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/category/hardDeleteCategory?categoryId=${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Company Info endpoints
+  async createCompanyInfo(data: any): Promise<{ message: string; data: any }> {
+    return this.request<{ message: string; data: any }>('/createCompanyInfo', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAllCompanyInfo(pageNumber: number = 1, pageSize: number = 10): Promise<{ message: string; data: any[] }> {
+    return this.request<{ message: string; data: any[] }>(`/getAllCompanyInfo?PageNumber=${pageNumber}&PageSize=${pageSize}`);
+  }
+
+  async uploadCompanyLogo(id: number, file: File): Promise<{ message: string; data: any }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.request<{ message: string; data: any }>(`/uploadCompanyLogo?Id=${id}`, {
+      method: 'POST',
+      headers: {},
+      body: formData,
+    });
+  }
+
+  async updateCompanyInfo(id: number, data: any): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/updateCompanyInfo?Id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async hardDeleteCompanyInfo(id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/hardDelete?Id=${id}`, {
+      method: 'DELETE',
     });
   }
 
@@ -83,32 +231,6 @@ class ApiService {
     });
   }
 
-  // Categories
-  async getCategories(): Promise<{ data: any[] }> {
-    return this.request<{ data: any[] }>('/category/getAllCategories');
-  }
-
-  async createCategory(data: any): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/category/create-category', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async updateCategory(data: any): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/category/updateCategory', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteCategory(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/category/deleteCategory?categoryId=${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Orders
   async getOrders(): Promise<{ data: any[] }> {
     return this.request<{ data: any[] }>('/Order/getAllOrder');
   }
@@ -120,25 +242,6 @@ class ApiService {
     });
   }
 
-  // Users
-  async getUsers(): Promise<{ data: any[] }> {
-    return this.request<{ data: any[] }>('/users/getAllUsers');
-  }
-
-  async updateUser(data: any): Promise<{ message: string }> {
-    return this.request<{ message: string }>('/users/updateUser', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteUser(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/users/deleteUser?userId=${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Stores
   async getStores(): Promise<{ data: any[] }> {
     return this.request<{ data: any[] }>('/store/getAllStores');
   }
@@ -163,7 +266,6 @@ class ApiService {
     });
   }
 
-  // Payment Requests
   async getPaymentRequests(): Promise<{ data: any[] }> {
     return this.request<{ data: any[] }>('/payment/requests');
   }
