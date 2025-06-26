@@ -16,7 +16,9 @@ import {
   RegisterResponse,
   VerifyOTPRequest,
   VerifyOTPResponse,
-  AdminDashboardDTO
+  AdminDashboardDTO,
+  TransactionDTO,
+  BillingDTO
 } from '@/types/api';
 
 interface ApiResponse<T> {
@@ -537,6 +539,98 @@ class ApiService {
       headers: this.getAuthHeaders()
     });
     return this.handleResponse<void>(response);
+  }
+
+  // Billing Management
+  async getBillings(page?: number, pageSize?: number): Promise<ApiResponse<BillingDTO[]>> {
+    let url = `${this.BASE_URL}/billing`;
+    if (page && pageSize) {
+      url += `?page=${page}&pageSize=${pageSize}`;
+    }
+    const response = await fetch(url, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<BillingDTO[]>(response);
+  }
+
+  async createBilling(billing: Omit<BillingDTO, 'billingId'>): Promise<ApiResponse<BillingDTO>> {
+    const response = await fetch(`${this.BASE_URL}/billing`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(billing)
+    });
+    return this.handleResponse<BillingDTO>(response);
+  }
+
+  async updateBilling(id: number, billing: Partial<BillingDTO>): Promise<ApiResponse<BillingDTO>> {
+    const response = await fetch(`${this.BASE_URL}/billing/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(billing)
+    });
+    return this.handleResponse<BillingDTO>(response);
+  }
+
+  async deleteBilling(id: number): Promise<ApiResponse<void>> {
+    const response = await fetch(`${this.BASE_URL}/billing/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  // Transaction Management
+  async getTransactions(page?: number, pageSize?: number): Promise<ApiResponse<TransactionDTO[]>> {
+    let url = `${this.BASE_URL}/transaction`;
+    if (page && pageSize) {
+      url += `?page=${page}&pageSize=${pageSize}`;
+    }
+    const response = await fetch(url, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<TransactionDTO[]>(response);
+  }
+
+  async getTransactionById(id: number): Promise<ApiResponse<TransactionDTO>> {
+    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<TransactionDTO>(response);
+  }
+
+  async createTransaction(transaction: Omit<TransactionDTO, 'transactionId'>): Promise<ApiResponse<TransactionDTO>> {
+    const response = await fetch(`${this.BASE_URL}/transaction`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(transaction)
+    });
+    return this.handleResponse<TransactionDTO>(response);
+  }
+
+  async updateTransaction(id: number, transaction: Partial<TransactionDTO>): Promise<ApiResponse<TransactionDTO>> {
+    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(transaction)
+    });
+    return this.handleResponse<TransactionDTO>(response);
+  }
+
+  async deleteTransaction(id: number): Promise<ApiResponse<void>> {
+    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  async updateTransactionStatus(id: number, status: string): Promise<ApiResponse<TransactionDTO>> {
+    const response = await fetch(`${this.BASE_URL}/transaction/${id}/status`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ status })
+    });
+    return this.handleResponse<TransactionDTO>(response);
   }
 
   // Generic request method for pages that use it

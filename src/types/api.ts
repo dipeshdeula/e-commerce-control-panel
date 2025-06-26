@@ -331,3 +331,52 @@ export interface PaymentMethodListResponse {
   message: string;
   data: PaymentMethodDTO[];
 }
+
+// Billing types
+export interface BillingDTO {
+  billingId: number;
+  userId: number;
+  userName?: string;
+  orderId: number;
+  amount: number;
+  billingDate: string;
+  status: string;
+  description?: string;
+  paymentMethodId?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BillingListResponse {
+  message: string;
+  data: BillingDTO[];
+}
+
+// Transaction types
+export interface TransactionDTO {
+  transactionId: number;
+  userId: number;
+  userName?: string;
+  orderId?: number;
+  billingId?: number;
+  amount: number;
+  transactionType: string; // 'payment', 'refund', 'adjustment', etc.
+  status: string; // 'pending', 'completed', 'failed', 'cancelled'
+  description?: string;
+  paymentMethodId?: number;
+  paymentMethodName?: string;
+  referenceNumber?: string;
+  transactionDate: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TransactionListResponse {
+  message: string;
+  data: TransactionDTO[];
+}
+
+export interface TransactionDetailResponse {
+  message: string;
+  data: TransactionDTO;
+}
