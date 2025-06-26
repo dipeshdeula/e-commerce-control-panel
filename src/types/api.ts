@@ -285,3 +285,49 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
 }
+
+// SubCategory types
+export interface SubCategoryDTO {
+  subCategoryId: number;
+  name: string;
+  description: string;
+  categoryId: number;
+  imageUrl: string;
+  isActive: boolean;
+  slug?: string;
+}
+
+export interface SubCategoryListResponse {
+  message: string;
+  data: SubCategoryDTO[];
+}
+
+// SubSubCategory types  
+export interface SubSubCategoryDTO {
+  subSubCategoryId: number;
+  name: string;
+  description: string;
+  subCategoryId: number;
+  imageUrl: string;
+  isActive: boolean;
+  slug?: string;
+}
+
+export interface SubSubCategoryListResponse {
+  message: string;
+  data: SubSubCategoryDTO[];
+}
+
+// Payment Method types
+export interface PaymentMethodDTO {
+  id: number;
+  name: string;
+  description: string;
+  isActive: boolean;
+  imageUrl?: string;
+}
+
+export interface PaymentMethodListResponse {
+  message: string;
+  data: PaymentMethodDTO[];
+}
