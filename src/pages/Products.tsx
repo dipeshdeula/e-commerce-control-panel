@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
@@ -23,10 +22,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, RotateCcw } from 'lucide-react';
 
 export const Products: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,65 +41,102 @@ export const Products: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
     description: '',
-    price: '',
+    marketPrice: '',
+    costPrice: '',
+    discountPrice: '',
     stockQuantity: '',
+    sku: '',
+    weight: '',
+    dimensions: '',
     categoryId: '',
-    imageUrl: '',
+    subCategoryId: '',
+    subSubCategoryId: '',
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => apiService.getProducts(),
+    queryKey: ['products', currentPage, pageSize],
+    queryFn: () => apiService.getProducts(currentPage, pageSize),
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['categories-all'],
+    queryFn: () => apiService.getCategories(1, 100),
+  });
+
+  const { data: subCategories } = useQuery({
+    queryKey: ['subcategories-all'],
+    queryFn: () => apiService.getSubCategories(1, 100),
+  });
+
+  const { data: subSubCategories } = useQuery({
+    queryKey: ['subsubcategories-all'],
+    queryFn: () => apiService.getSubSubCategories(1, 100),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiService.request('/products/create-product', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiService.createProduct(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsCreateOpen(false);
       resetForm();
       toast({ title: 'Product created successfully' });
     },
+    onError: (error) => {
+      toast({ title: 'Error creating product', description: error.message, variant: 'destructive' });
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => apiService.request('/products/updateProduct', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiService.updateProduct(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsEditOpen(false);
       resetForm();
       toast({ title: 'Product updated successfully' });
     },
+    onError: (error) => {
+      toast({ title: 'Error updating product', description: error.message, variant: 'destructive' });
+    },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.request(`/products/hardDeleteProduct?productId=${id}`, {
-      method: 'DELETE',
-    }),
+  const softDeleteMutation = useMutation({
+    mutationFn: (id: number) => apiService.softDeleteProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Product deleted successfully' });
+      toast({ title: 'Product soft deleted successfully' });
+    },
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: (id: number) => apiService.hardDeleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: 'Product permanently deleted' });
     },
   });
 
   const resetForm = () => {
     setFormData({
       name: '',
+      slug: '',
       description: '',
-      price: '',
+      marketPrice: '',
+      costPrice: '',
+      discountPrice: '',
       stockQuantity: '',
+      sku: '',
+      weight: '',
+      dimensions: '',
       categoryId: '',
-      imageUrl: '',
+      subCategoryId: '',
+      subSubCategoryId: '',
     });
     setSelectedProduct(null);
   };
@@ -102,11 +145,18 @@ export const Products: React.FC = () => {
     setSelectedProduct(product);
     setFormData({
       name: product.name,
+      slug: product.slug,
       description: product.description,
-      price: product.price.toString(),
-      stockQuantity: product.stockQuantity.toString(),
-      categoryId: product.categoryId.toString(),
-      imageUrl: product.imageUrl,
+      marketPrice: product.marketPrice?.toString() || '',
+      costPrice: product.costPrice?.toString() || '',
+      discountPrice: product.discountPrice?.toString() || '',
+      stockQuantity: product.stockQuantity?.toString() || '',
+      sku: product.sku,
+      weight: product.weight,
+      dimensions: product.dimensions,
+      categoryId: product.categoryId?.toString() || '',
+      subCategoryId: product.subCategoryId?.toString() || '',
+      subSubCategoryId: product.subSubCategoryId?.toString() || '',
     });
     setIsEditOpen(true);
   };
@@ -115,17 +165,31 @@ export const Products: React.FC = () => {
     e.preventDefault();
     const data = {
       ...formData,
-      price: parseFloat(formData.price),
+      marketPrice: parseFloat(formData.marketPrice),
+      costPrice: parseFloat(formData.costPrice),
+      discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : null,
       stockQuantity: parseInt(formData.stockQuantity),
       categoryId: parseInt(formData.categoryId),
+      subCategoryId: formData.subCategoryId ? parseInt(formData.subCategoryId) : null,
+      subSubCategoryId: formData.subSubCategoryId ? parseInt(formData.subSubCategoryId) : null,
     };
 
     if (selectedProduct) {
-      updateMutation.mutate({ ...data, productId: selectedProduct.productId });
+      updateMutation.mutate({ ...data, id: selectedProduct.id });
     } else {
       createMutation.mutate(data);
     }
   };
+
+  // Filter subcategories based on selected category
+  const filteredSubCategories = subCategories?.data?.filter((subCat: any) => 
+    subCat.categoryId === parseInt(formData.categoryId)
+  ) || [];
+
+  // Filter sub-subcategories based on selected subcategory
+  const filteredSubSubCategories = subSubCategories?.data?.filter((subSubCat: any) => 
+    subSubCat.subCategoryId === parseInt(formData.subCategoryId)
+  ) || [];
 
   const filteredProducts = products?.data?.filter((product: any) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -149,21 +213,32 @@ export const Products: React.FC = () => {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>Create New Product</DialogTitle>
                 <DialogDescription>Add a new product to your inventory</DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
+              <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="slug">Slug</Label>
+                    <Input
+                      id="slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
@@ -173,20 +248,43 @@ export const Products: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="price">Price</Label>
+                    <Label htmlFor="marketPrice">Market Price</Label>
                     <Input
-                      id="price"
+                      id="marketPrice"
                       type="number"
                       step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      value={formData.marketPrice}
+                      onChange={(e) => setFormData({ ...formData, marketPrice: e.target.value })}
                       required
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="stockQuantity">Stock</Label>
+                    <Label htmlFor="costPrice">Cost Price</Label>
+                    <Input
+                      id="costPrice"
+                      type="number"
+                      step="0.01"
+                      value={formData.costPrice}
+                      onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="discountPrice">Discount Price</Label>
+                    <Input
+                      id="discountPrice"
+                      type="number"
+                      step="0.01"
+                      value={formData.discountPrice}
+                      onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="stockQuantity">Stock Quantity</Label>
                     <Input
                       id="stockQuantity"
                       type="number"
@@ -195,25 +293,91 @@ export const Products: React.FC = () => {
                       required
                     />
                   </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="sku">SKU</Label>
+                    <Input
+                      id="sku"
+                      value={formData.sku}
+                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="weight">Weight</Label>
+                    <Input
+                      id="weight"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dimensions">Dimensions</Label>
+                    <Input
+                      id="dimensions"
+                      value={formData.dimensions}
+                      onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="categoryId">Category ID</Label>
-                  <Input
-                    id="categoryId"
-                    type="number"
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    required
-                  />
+                  <Label htmlFor="categoryId">Category</Label>
+                  <Select 
+                    value={formData.categoryId} 
+                    onValueChange={(value) => setFormData({ ...formData, categoryId: value, subCategoryId: '', subSubCategoryId: '' })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.data?.map((category: any) => (
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  />
-                </div>
+                {formData.categoryId && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="subCategoryId">SubCategory</Label>
+                    <Select 
+                      value={formData.subCategoryId} 
+                      onValueChange={(value) => setFormData({ ...formData, subCategoryId: value, subSubCategoryId: '' })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a subcategory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredSubCategories.map((subCategory: any) => (
+                          <SelectItem key={subCategory.id} value={subCategory.id.toString()}>
+                            {subCategory.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {formData.subCategoryId && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="subSubCategoryId">SubSubCategory</Label>
+                    <Select 
+                      value={formData.subSubCategoryId} 
+                      onValueChange={(value) => setFormData({ ...formData, subSubCategoryId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a sub-subcategory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredSubSubCategories.map((subSubCategory: any) => (
+                          <SelectItem key={subSubCategory.id} value={subSubCategory.id.toString()}>
+                            {subSubCategory.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
@@ -247,31 +411,41 @@ export const Products: React.FC = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts.map((product: any) => (
-                <TableRow key={product.productId}>
+                <TableRow key={product.id}>
                   <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={product.imageUrl || '/placeholder.svg'}
-                        alt={product.name}
-                        className="w-10 h-10 rounded object-cover"
-                      />
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500">{product.description}</div>
-                      </div>
+                    <div>
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-sm text-gray-500">{product.sku}</div>
                     </div>
                   </TableCell>
-                  <TableCell>${product.price}</TableCell>
-                  <TableCell>{product.stockQuantity}</TableCell>
                   <TableCell>
-                    <Badge variant={product.isActive ? "default" : "secondary"}>
-                      {product.isActive ? 'Active' : 'Inactive'}
+                    <div>
+                      <div className="font-medium">Rs. {product.marketPrice}</div>
+                      {product.discountPrice && (
+                        <div className="text-sm text-green-600">Sale: Rs. {product.discountPrice}</div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.stockQuantity > 0 ? "default" : "destructive"}>
+                      {product.stockQuantity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {categories?.data?.find((cat: any) => cat.id === product.categoryId)?.name || 'N/A'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.isInStock ? "default" : "secondary"}>
+                      {product.isInStock ? 'In Stock' : 'Out of Stock'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -286,7 +460,7 @@ export const Products: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => deleteMutation.mutate(product.productId)}
+                        onClick={() => softDeleteMutation.mutate(product.id)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -301,21 +475,32 @@ export const Products: React.FC = () => {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>Edit Product</DialogTitle>
               <DialogDescription>Update product information</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
+            <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-name">Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-slug">Slug</Label>
+                  <Input
+                    id="edit-slug"
+                    value={formData.slug}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-description">Description</Label>
@@ -325,20 +510,43 @@ export const Products: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-price">Price</Label>
+                  <Label htmlFor="edit-marketPrice">Market Price</Label>
                   <Input
-                    id="edit-price"
+                    id="edit-marketPrice"
                     type="number"
                     step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    value={formData.marketPrice}
+                    onChange={(e) => setFormData({ ...formData, marketPrice: e.target.value })}
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-stockQuantity">Stock</Label>
+                  <Label htmlFor="edit-costPrice">Cost Price</Label>
+                  <Input
+                    id="edit-costPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-discountPrice">Discount Price</Label>
+                  <Input
+                    id="edit-discountPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.discountPrice}
+                    onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-stockQuantity">Stock Quantity</Label>
                   <Input
                     id="edit-stockQuantity"
                     type="number"
@@ -347,24 +555,32 @@ export const Products: React.FC = () => {
                     required
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-sku">SKU</Label>
+                  <Input
+                    id="edit-sku"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-categoryId">Category ID</Label>
-                <Input
-                  id="edit-categoryId"
-                  type="number"
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-imageUrl">Image URL</Label>
-                <Input
-                  id="edit-imageUrl"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                />
+                <Label htmlFor="edit-categoryId">Category</Label>
+                <Select 
+                  value={formData.categoryId} 
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: value, subCategoryId: '', subSubCategoryId: '' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.data?.map((category: any) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <DialogFooter>

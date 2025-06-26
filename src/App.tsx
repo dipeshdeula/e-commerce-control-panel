@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,10 +12,14 @@ import { Dashboard } from "@/pages/Dashboard";
 import { Unauthorized } from "@/pages/Unauthorized";
 import { Products } from "@/pages/Products";
 import { Categories } from "@/pages/Categories";
+import { SubCategories } from "@/pages/SubCategories";
+import { SubSubCategories } from "@/pages/SubSubCategories";
 import { Orders } from "@/pages/Orders";
 import { Users } from "@/pages/Users";
 import { Stores } from "@/pages/Stores";
 import { Payments } from "@/pages/Payments";
+import { PaymentMethods } from "@/pages/PaymentMethods";
+import { PaymentRequests } from "@/pages/PaymentRequests";
 import { Settings } from "@/pages/Settings";
 import { Notifications } from "@/pages/Notifications";
 import { CompanyInfo } from "@/pages/CompanyInfo";
@@ -65,6 +70,26 @@ const App = () => (
               }
             />
             <Route
+              path="/subcategories"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SubCategories />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subsubcategories"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SubSubCategories />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/products"
               element={
                 <ProtectedRoute>
@@ -100,6 +125,26 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Payments />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payment-methods"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PaymentMethods />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payment-requests"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PaymentRequests />
                   </Layout>
                 </ProtectedRoute>
               }
