@@ -4,12 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Layout } from "@/components/layout/Layout";
-import { Login } from "@/pages/Login";
 import { Dashboard } from "@/pages/Dashboard";
-import { Unauthorized } from "@/pages/Unauthorized";
 import { Products } from "@/pages/Products";
 import { Categories } from "@/pages/Categories";
 import { SubCategories } from "@/pages/SubCategories";
@@ -34,164 +30,130 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Users />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/categories"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Categories />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/subcategories"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <SubCategories />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/subsubcategories"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <SubSubCategories />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/products"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Products />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Orders />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/stores"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Stores />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payments"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Payments />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payment-methods"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <PaymentMethods />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payment-requests"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <PaymentRequests />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/company-info"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <CompanyInfo />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Reports />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Notifications />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <Layout>
+                <Dashboard />
+              </Layout>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <Layout>
+                <Users />
+              </Layout>
+            }
+          />
+          <Route
+            path="/categories"
+            element={
+              <Layout>
+                <Categories />
+              </Layout>
+            }
+          />
+          <Route
+            path="/subcategories"
+            element={
+              <Layout>
+                <SubCategories />
+              </Layout>
+            }
+          />
+          <Route
+            path="/subsubcategories"
+            element={
+              <Layout>
+                <SubSubCategories />
+              </Layout>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <Layout>
+                <Products />
+              </Layout>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <Layout>
+                <Orders />
+              </Layout>
+            }
+          />
+          <Route
+            path="/stores"
+            element={
+              <Layout>
+                <Stores />
+              </Layout>
+            }
+          />
+          <Route
+            path="/payments"
+            element={
+              <Layout>
+                <Payments />
+              </Layout>
+            }
+          />
+          <Route
+            path="/payment-methods"
+            element={
+              <Layout>
+                <PaymentMethods />
+              </Layout>
+            }
+          />
+          <Route
+            path="/payment-requests"
+            element={
+              <Layout>
+                <PaymentRequests />
+              </Layout>
+            }
+          />
+          <Route
+            path="/company-info"
+            element={
+              <Layout>
+                <CompanyInfo />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <Layout>
+                <Reports />
+              </Layout>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <Layout>
+                <Notifications />
+              </Layout>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <Layout>
+                <Settings />
+              </Layout>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
