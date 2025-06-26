@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
@@ -111,8 +112,11 @@ export const CompanyInfo: React.FC = () => {
   });
 
   const uploadLogoMutation = useMutation({
-    mutationFn: ({ id, file }: { id: number; file: File }) => 
-      apiService.uploadCompanyLogo(id, file),
+    mutationFn: ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('logo', file);
+      return apiService.uploadCompanyLogo(id, formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-info'] });
       toast({ 

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
@@ -79,10 +80,10 @@ export const Users: React.FC = () => {
     mutationFn: (data: any) => apiService.register(data),
     onSuccess: (response) => {
       if (response.success && response.data) {
-        const responseData = response.data;
+        const responseData = response.data as any;
         if (responseData.requiresOTP || responseData.requiresVerification) {
           setTempRegistrationData(responseData.data);
-          setOtpData({ ...otpData, email: responseData.data.email });
+          setOtpData({ ...otpData, email: responseData.data?.email || '' });
           setIsCreateOpen(false);
           setIsOtpOpen(true);
           toast({ 
