@@ -1,4 +1,3 @@
-
 import { 
   UserListDTO, 
   Role, 
@@ -27,7 +26,7 @@ interface ApiResponse<T> {
 }
 
 class ApiService {
-  public BASE_URL = 'http://110.34.2.30:5013/api';
+  public BASE_URL = 'https://localhost:7028/api';
 
   private getAuthHeaders() {
     const token = localStorage.getItem('accessToken');
