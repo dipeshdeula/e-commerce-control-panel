@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRoleAccess } from '@/hooks/use-role-access';
@@ -7,7 +8,8 @@ import {
   UserListDTO, 
   Role, 
   RoleDisplayNames, 
-  UpdateUserRoleResponse 
+  UpdateUserRoleResponse,
+  getRoleNameFromId
 } from '@/types/api';
 import {
   Sheet,
@@ -81,7 +83,7 @@ export const RoleManager: React.FC<RoleManagerProps> = ({ trigger }) => {
         setUsers(prevUsers => 
           prevUsers.map(user => 
             user.userId === userId 
-              ? { ...user, roleId: newRole, role: RoleDisplayNames[newRole] }
+              ? { ...user, role: newRole } // Keep role as number
               : user
           )
         );
@@ -174,9 +176,9 @@ export const RoleManager: React.FC<RoleManagerProps> = ({ trigger }) => {
                           </h3>
                           <Badge 
                             variant="outline" 
-                            className={getRoleColor(user.roleId)}
+                            className={getRoleColor(user.role)}
                           >
-                            {user.role}
+                            {getRoleNameFromId(user.role)}
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-600">{user.email}</p>
@@ -187,7 +189,7 @@ export const RoleManager: React.FC<RoleManagerProps> = ({ trigger }) => {
 
                       <div className="flex items-center gap-3">
                         <Select
-                          value={user.roleId.toString()}
+                          value={user.role.toString()}
                           onValueChange={(value) => 
                             updateUserRole(user.userId, parseInt(value) as Role)
                           }
