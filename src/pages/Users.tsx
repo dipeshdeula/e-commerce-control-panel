@@ -124,12 +124,12 @@ export const Users: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       
       // Check multiple possible ways the backend might indicate OTP requirement
-      const requiresOTP = response.requiresOTP || 
-                         response.requiresVerification || 
-                         response.data?.requiresOTP || 
-                         response.data?.requiresVerification ||
-                         response.message?.toLowerCase().includes('otp') ||
-                         response.message?.toLowerCase().includes('verification');
+      const requiresOTP = response.data?.requiresOTP || 
+                         response.data?.requiresVerification || 
+                         response.data?.data?.requiresOTP || 
+                         response.data?.data?.requiresVerification ||
+                         response.data?.message?.toLowerCase().includes('otp') ||
+                         response.data?.message?.toLowerCase().includes('verification');
       
       // For admin panel user creation, we'll assume OTP is always required unless explicitly stated otherwise
       const shouldShowOTP = requiresOTP !== false; // Will be true unless explicitly false
@@ -223,8 +223,11 @@ export const Users: React.FC = () => {
   });
 
   const uploadImageMutation = useMutation({
-    mutationFn: ({ userId, file }: { userId: number; file: File }) => 
-      apiService.uploadUserImage(userId, file),
+    mutationFn: ({ userId, file }: { userId: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      return apiService.uploadUserImage(userId, formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({ 

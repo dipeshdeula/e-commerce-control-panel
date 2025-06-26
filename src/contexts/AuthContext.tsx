@@ -1,3 +1,4 @@
+
 import React, { createContext, useEffect, useState } from 'react';
 import { UserDTO } from '@/types/api';
 import { apiService } from '@/services/api';
@@ -71,9 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiService.login({ email, password });
       console.log('Login response:', response);
       
-      if (response.success && response.accessToken) {
+      if (response.success && response.data?.accessToken) {
         // Decode the JWT to extract user information
-        const decodedToken = decodeJWT(response.accessToken);
+        const decodedToken = decodeJWT(response.data.accessToken);
         console.log('Decoded token:', decodedToken);
         
         if (decodedToken) {
@@ -102,11 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           console.log('User data:', userData);
           
-          setToken(response.accessToken);
+          setToken(response.data.accessToken);
           setUser(userData);
           
-          localStorage.setItem('accessToken', response.accessToken);
-          localStorage.setItem('refreshToken', response.refreshToken);
+          localStorage.setItem('accessToken', response.data.accessToken);
+          localStorage.setItem('refreshToken', response.data.refreshToken);
           localStorage.setItem('user', JSON.stringify(userData));
           
           toast({

@@ -160,12 +160,8 @@ class ApiService {
   }
 
   // Category Management
-  async getCategories(page?: number, pageSize?: number): Promise<ApiResponse<CategoryDTO[]>> {
-    let url = `${this.BASE_URL}/Category`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
+  async getCategories(): Promise<ApiResponse<CategoryDTO[]>> {
+    const response = await fetch(`${this.BASE_URL}/Category`, {
       headers: this.getAuthHeaders()
     });
     return this.handleResponse<CategoryDTO[]>(response);
@@ -222,31 +218,27 @@ class ApiService {
   }
 
   // SubCategory Management
-  async getSubCategories(page?: number, pageSize?: number): Promise<ApiResponse<SubCategoryDTO[]>> {
-    let url = `${this.BASE_URL}/SubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
+  async getSubCategories(): Promise<ApiResponse<SubCategoryDTO[]>> {
+    const response = await fetch(`${this.BASE_URL}/SubCategory`, {
       headers: this.getAuthHeaders()
     });
     return this.handleResponse<SubCategoryDTO[]>(response);
   }
 
-  async createSubCategory(subCategory: Omit<SubCategoryDTO, 'subCategoryId'>): Promise<ApiResponse<SubCategoryDTO>> {
+  async createSubCategory(formData: FormData): Promise<ApiResponse<SubCategoryDTO>> {
     const response = await fetch(`${this.BASE_URL}/SubCategory`, {
       method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(subCategory)
+      headers: this.getFormHeaders(),
+      body: formData
     });
     return this.handleResponse<SubCategoryDTO>(response);
   }
 
-  async updateSubCategory(id: number, subCategory: Partial<SubCategoryDTO>): Promise<ApiResponse<SubCategoryDTO>> {
+  async updateSubCategory(id: number, formData: FormData): Promise<ApiResponse<SubCategoryDTO>> {
     const response = await fetch(`${this.BASE_URL}/SubCategory/${id}`, {
       method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(subCategory)
+      headers: this.getFormHeaders(),
+      body: formData
     });
     return this.handleResponse<SubCategoryDTO>(response);
   }
@@ -284,31 +276,27 @@ class ApiService {
   }
 
   // SubSubCategory Management
-  async getSubSubCategories(page?: number, pageSize?: number): Promise<ApiResponse<SubSubCategoryDTO[]>> {
-    let url = `${this.BASE_URL}/SubSubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
+  async getSubSubCategories(): Promise<ApiResponse<SubSubCategoryDTO[]>> {
+    const response = await fetch(`${this.BASE_URL}/SubSubCategory`, {
       headers: this.getAuthHeaders()
     });
     return this.handleResponse<SubSubCategoryDTO[]>(response);
   }
 
-  async createSubSubCategory(subSubCategory: Omit<SubSubCategoryDTO, 'subSubCategoryId'>): Promise<ApiResponse<SubSubCategoryDTO>> {
+  async createSubSubCategory(formData: FormData): Promise<ApiResponse<SubSubCategoryDTO>> {
     const response = await fetch(`${this.BASE_URL}/SubSubCategory`, {
       method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(subSubCategory)
+      headers: this.getFormHeaders(),
+      body: formData
     });
     return this.handleResponse<SubSubCategoryDTO>(response);
   }
 
-  async updateSubSubCategory(id: number, subSubCategory: Partial<SubSubCategoryDTO>): Promise<ApiResponse<SubSubCategoryDTO>> {
+  async updateSubSubCategory(id: number, formData: FormData): Promise<ApiResponse<SubSubCategoryDTO>> {
     const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
       method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(subSubCategory)
+      headers: this.getFormHeaders(),
+      body: formData
     });
     return this.handleResponse<SubSubCategoryDTO>(response);
   }
@@ -346,12 +334,8 @@ class ApiService {
   }
 
   // Product Management
-  async getProducts(page?: number, pageSize?: number): Promise<ApiResponse<ProductDTO[]>> {
-    let url = `${this.BASE_URL}/Product`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
+  async getProducts(): Promise<ApiResponse<ProductDTO[]>> {
+    const response = await fetch(`${this.BASE_URL}/Product`, {
       headers: this.getAuthHeaders()
     });
     return this.handleResponse<ProductDTO[]>(response);
