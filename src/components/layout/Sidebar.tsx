@@ -22,9 +22,7 @@ import {
   Box
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { RoleManager } from '@/components/ui/role-manager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,7 +66,6 @@ const navigation = [
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { logout } = useAuth();
   const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory', 'Payments']);
 
   const toggleExpanded = (itemName: string) => {
@@ -84,6 +81,11 @@ export const Sidebar: React.FC = () => {
       return item.children.some((child: any) => location.pathname === child.href);
     }
     return false;
+  };
+
+  const handleLogout = () => {
+    // Simple logout - could redirect to login page or refresh
+    window.location.reload();
   };
 
   const renderNavItem = (item: any) => {
@@ -182,8 +184,6 @@ export const Sidebar: React.FC = () => {
       </nav>
       
       <div className="px-4 py-4 border-t border-gray-200 space-y-2">
-        <RoleManager />
-        
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -207,7 +207,7 @@ export const Sidebar: React.FC = () => {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction 
-                onClick={logout}
+                onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Yes, Logout
