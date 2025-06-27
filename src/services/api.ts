@@ -1,649 +1,121 @@
-import { 
-  UserListDTO, 
-  Role, 
-  UpdateUserRoleResponse,
-  CategoryDTO,
-  SubCategoryDTO,
-  SubSubCategoryDTO,
-  ProductDTO,
-  OrderDTO,
-  PaymentMethodDTO,
-  PaymentRequestDTO,
-  StoreDTO,
-  LoginRequest,
-  LoginResponse,
-  RegisterRequest,
-  RegisterResponse,
-  VerifyOTPRequest,
-  VerifyOTPResponse,
-  AdminDashboardDTO,
-  TransactionDTO,
-  BillingDTO
-} from '@/types/api';
 
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-}
+import { BaseApiService } from './base-api';
+import { AuthService } from './auth-service';
+import { DashboardService } from './dashboard-service';
+import { UserService } from './user-service';
+import { CategoryService } from './category-service';
+import { ProductService } from './product-service';
+import { OrderService } from './order-service';
+import { PaymentService } from './payment-service';
+import { StoreService } from './store-service';
+import { CompanyService } from './company-service';
+import { BillingService } from './billing-service';
+import { TransactionService } from './transaction-service';
 
-class ApiService {
-  public BASE_URL = 'https://localhost:7028/api';
-
-  private getAuthHeaders() {
-    const token = localStorage.getItem('accessToken');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
-    };
-  }
-
-  private getFormHeaders() {
-    const token = localStorage.getItem('accessToken');
-    return {
-      'Authorization': token ? `Bearer ${token}` : '',
-    };
-  }
-
-  private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    try {
-      const data = await response.json();
-      return {
-        success: response.ok,
-        data: response.ok ? data : undefined,
-        message: response.ok ? undefined : data.message || 'An error occurred'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to parse response'
-      };
-    }
-  }
+class ApiService extends BaseApiService {
+  private authService = new AuthService();
+  private dashboardService = new DashboardService();
+  private userService = new UserService();
+  private categoryService = new CategoryService();
+  private productService = new ProductService();
+  private orderService = new OrderService();
+  private paymentService = new PaymentService();
+  private storeService = new StoreService();
+  private companyService = new CompanyService();
+  private billingService = new BillingService();
+  private transactionService = new TransactionService();
 
   // Auth methods
-  async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
-    const response = await fetch(`${this.BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(credentials)
-    });
-    return this.handleResponse<LoginResponse>(response);
-  }
-
-  async register(userData: RegisterRequest): Promise<ApiResponse<RegisterResponse>> {
-    const response = await fetch(`${this.BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(userData)
-    });
-    return this.handleResponse<RegisterResponse>(response);
-  }
-
-  async verifyOtp(otpData: VerifyOTPRequest): Promise<ApiResponse<VerifyOTPResponse>> {
-    const response = await fetch(`${this.BASE_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(otpData)
-    });
-    return this.handleResponse<VerifyOTPResponse>(response);
-  }
+  login = this.authService.login.bind(this.authService);
+  register = this.authService.register.bind(this.authService);
+  verifyOtp = this.authService.verifyOtp.bind(this.authService);
 
   // Dashboard
-  async getDashboard(): Promise<ApiResponse<AdminDashboardDTO>> {
-    const response = await fetch(`${this.BASE_URL}/dashboard`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<AdminDashboardDTO>(response);
-  }
+  getDashboard = this.dashboardService.getDashboard.bind(this.dashboardService);
 
   // User Management
-  async getUsers(page?: number, pageSize?: number): Promise<ApiResponse<UserListDTO[]>> {
-    let url = `${this.BASE_URL}/User/getAllUsers`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<UserListDTO[]>(response);
-  }
-
-  async updateUserRole(userId: number, role: Role): Promise<ApiResponse<UpdateUserRoleResponse>> {
-    const response = await fetch(`${this.BASE_URL}/User/updateUserRole`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ userId, role })
-    });
-    return this.handleResponse<UpdateUserRoleResponse>(response);
-  }
-
-  async updateUser(id: number, userData: any): Promise<ApiResponse<any>> {
-    const response = await fetch(`${this.BASE_URL}/User/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(userData)
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async uploadUserImage(userId: number, formData: FormData): Promise<ApiResponse<any>> {
-    const response = await fetch(`${this.BASE_URL}/User/upload-image/${userId}`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async softDeleteUser(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/User/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteUser(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/User/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async unDeleteUser(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/User/restore/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getUsers = this.userService.getUsers.bind(this.userService);
+  updateUserRole = this.userService.updateUserRole.bind(this.userService);
+  updateUser = this.userService.updateUser.bind(this.userService);
+  uploadUserImage = this.userService.uploadUserImage.bind(this.userService);
+  softDeleteUser = this.userService.softDeleteUser.bind(this.userService);
+  hardDeleteUser = this.userService.hardDeleteUser.bind(this.userService);
+  unDeleteUser = this.userService.unDeleteUser.bind(this.userService);
 
   // Category Management
-  async getCategories(page?: number, pageSize?: number): Promise<ApiResponse<CategoryDTO[]>> {
-    let url = `${this.BASE_URL}/Category`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<CategoryDTO[]>(response);
-  }
-
-  async createCategory(formData: FormData): Promise<ApiResponse<CategoryDTO>> {
-    const response = await fetch(`${this.BASE_URL}/Category`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<CategoryDTO>(response);
-  }
-
-  async updateCategory(id: number, formData: FormData): Promise<ApiResponse<CategoryDTO>> {
-    const response = await fetch(`${this.BASE_URL}/Category/${id}`, {
-      method: 'PUT',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<CategoryDTO>(response);
-  }
-
-  async deleteCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Category/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async softDeleteCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Category/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Category/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async unDeleteCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Category/restore/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getCategories = this.categoryService.getCategories.bind(this.categoryService);
+  createCategory = this.categoryService.createCategory.bind(this.categoryService);
+  updateCategory = this.categoryService.updateCategory.bind(this.categoryService);
+  deleteCategory = this.categoryService.deleteCategory.bind(this.categoryService);
+  softDeleteCategory = this.categoryService.softDeleteCategory.bind(this.categoryService);
+  hardDeleteCategory = this.categoryService.hardDeleteCategory.bind(this.categoryService);
+  unDeleteCategory = this.categoryService.unDeleteCategory.bind(this.categoryService);
 
   // SubCategory Management
-  async getSubCategories(page?: number, pageSize?: number): Promise<ApiResponse<SubCategoryDTO[]>> {
-    let url = `${this.BASE_URL}/SubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<SubCategoryDTO[]>(response);
-  }
-
-  async createSubCategory(formData: FormData): Promise<ApiResponse<SubCategoryDTO>> {
-    const response = await fetch(`${this.BASE_URL}/SubCategory`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubCategoryDTO>(response);
-  }
-
-  async updateSubCategory(id: number, formData: FormData): Promise<ApiResponse<SubCategoryDTO>> {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/${id}`, {
-      method: 'PUT',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubCategoryDTO>(response);
-  }
-
-  async deleteSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async softDeleteSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async unDeleteSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/restore/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getSubCategories = this.categoryService.getSubCategories.bind(this.categoryService);
+  createSubCategory = this.categoryService.createSubCategory.bind(this.categoryService);
+  updateSubCategory = this.categoryService.updateSubCategory.bind(this.categoryService);
+  deleteSubCategory = this.categoryService.deleteSubCategory.bind(this.categoryService);
+  softDeleteSubCategory = this.categoryService.softDeleteSubCategory.bind(this.categoryService);
+  hardDeleteSubCategory = this.categoryService.hardDeleteSubCategory.bind(this.categoryService);
+  unDeleteSubCategory = this.categoryService.unDeleteSubCategory.bind(this.categoryService);
 
   // SubSubCategory Management
-  async getSubSubCategories(page?: number, pageSize?: number): Promise<ApiResponse<SubSubCategoryDTO[]>> {
-    let url = `${this.BASE_URL}/SubSubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<SubSubCategoryDTO[]>(response);
-  }
-
-  async createSubSubCategory(formData: FormData): Promise<ApiResponse<SubSubCategoryDTO>> {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubSubCategoryDTO>(response);
-  }
-
-  async updateSubSubCategory(id: number, formData: FormData): Promise<ApiResponse<SubSubCategoryDTO>> {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
-      method: 'PUT',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubSubCategoryDTO>(response);
-  }
-
-  async deleteSubSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async softDeleteSubSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteSubSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async unDeleteSubSubCategory(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/restore/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getSubSubCategories = this.categoryService.getSubSubCategories.bind(this.categoryService);
+  createSubSubCategory = this.categoryService.createSubSubCategory.bind(this.categoryService);
+  updateSubSubCategory = this.categoryService.updateSubSubCategory.bind(this.categoryService);
+  deleteSubSubCategory = this.categoryService.deleteSubSubCategory.bind(this.categoryService);
+  softDeleteSubSubCategory = this.categoryService.softDeleteSubSubCategory.bind(this.categoryService);
+  hardDeleteSubSubCategory = this.categoryService.hardDeleteSubSubCategory.bind(this.categoryService);
+  unDeleteSubSubCategory = this.categoryService.unDeleteSubSubCategory.bind(this.categoryService);
 
   // Product Management
-  async getProducts(page?: number, pageSize?: number): Promise<ApiResponse<ProductDTO[]>> {
-    let url = `${this.BASE_URL}/Product`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<ProductDTO[]>(response);
-  }
-
-  async createProduct(product: Omit<ProductDTO, 'productId'>): Promise<ApiResponse<ProductDTO>> {
-    const response = await fetch(`${this.BASE_URL}/Product`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(product)
-    });
-    return this.handleResponse<ProductDTO>(response);
-  }
-
-  async updateProduct(product: Partial<ProductDTO> & { id: number }): Promise<ApiResponse<ProductDTO>> {
-    const { id, ...updateData } = product;
-    const response = await fetch(`${this.BASE_URL}/Product/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(updateData)
-    });
-    return this.handleResponse<ProductDTO>(response);
-  }
-
-  async deleteProduct(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Product/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async softDeleteProduct(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Product/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteProduct(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/Product/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getProducts = this.productService.getProducts.bind(this.productService);
+  createProduct = this.productService.createProduct.bind(this.productService);
+  updateProduct = this.productService.updateProduct.bind(this.productService);
+  deleteProduct = this.productService.deleteProduct.bind(this.productService);
+  softDeleteProduct = this.productService.softDeleteProduct.bind(this.productService);
+  hardDeleteProduct = this.productService.hardDeleteProduct.bind(this.productService);
 
   // Order Management
-  async getOrders(): Promise<ApiResponse<OrderDTO[]>> {
-    const response = await fetch(`${this.BASE_URL}/Order/getAllOrder`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<OrderDTO[]>(response);
-  }
-
-  async updateOrderStatus(orderId: number, status: string): Promise<ApiResponse<OrderDTO>> {
-    const response = await fetch(`${this.BASE_URL}/Order/confirmOrderStatus`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ orderId, status })
-    });
-    return this.handleResponse<OrderDTO>(response);
-  }
+  getOrders = this.orderService.getOrders.bind(this.orderService);
+  updateOrderStatus = this.orderService.updateOrderStatus.bind(this.orderService);
 
   // Payment Method Management
-  async getPaymentMethods(): Promise<ApiResponse<PaymentMethodDTO[]>> {
-    const response = await fetch(`${this.BASE_URL}/paymentMethod`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<PaymentMethodDTO[]>(response);
-  }
-
-  async createPaymentMethod(paymentMethod: Omit<PaymentMethodDTO, 'id'>): Promise<ApiResponse<PaymentMethodDTO>> {
-    const response = await fetch(`${this.BASE_URL}/paymentMethod`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(paymentMethod)
-    });
-    return this.handleResponse<PaymentMethodDTO>(response);
-  }
-
-  async updatePaymentMethod(id: number, paymentMethod: Partial<PaymentMethodDTO>): Promise<ApiResponse<PaymentMethodDTO>> {
-    const response = await fetch(`${this.BASE_URL}/paymentMethod/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(paymentMethod)
-    });
-    return this.handleResponse<PaymentMethodDTO>(response);
-  }
-
-  async deletePaymentMethod(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/paymentMethod/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getPaymentMethods = this.paymentService.getPaymentMethods.bind(this.paymentService);
+  createPaymentMethod = this.paymentService.createPaymentMethod.bind(this.paymentService);
+  updatePaymentMethod = this.paymentService.updatePaymentMethod.bind(this.paymentService);
+  deletePaymentMethod = this.paymentService.deletePaymentMethod.bind(this.paymentService);
 
   // Payment Request Management
-  async getPaymentRequests(): Promise<ApiResponse<PaymentRequestDTO[]>> {
-    const response = await fetch(`${this.BASE_URL}/paymentRequest`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<PaymentRequestDTO[]>(response);
-  }
-
-  async createPaymentRequest(paymentRequest: Omit<PaymentRequestDTO, 'id'>): Promise<ApiResponse<PaymentRequestDTO>> {
-    const response = await fetch(`${this.BASE_URL}/paymentRequest`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(paymentRequest)
-    });
-    return this.handleResponse<PaymentRequestDTO>(response);
-  }
-
-  async updatePaymentRequest(id: number, paymentRequest: Partial<PaymentRequestDTO>): Promise<ApiResponse<PaymentRequestDTO>> {
-    const response = await fetch(`${this.BASE_URL}/paymentRequest/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(paymentRequest)
-    });
-    return this.handleResponse<PaymentRequestDTO>(response);
-  }
-
-  async deletePaymentRequest(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/paymentRequest/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getPaymentRequests = this.paymentService.getPaymentRequests.bind(this.paymentService);
+  createPaymentRequest = this.paymentService.createPaymentRequest.bind(this.paymentService);
+  updatePaymentRequest = this.paymentService.updatePaymentRequest.bind(this.paymentService);
+  deletePaymentRequest = this.paymentService.deletePaymentRequest.bind(this.paymentService);
 
   // Store Management
-  async getStores(): Promise<ApiResponse<StoreDTO[]>> {
-    const response = await fetch(`${this.BASE_URL}/Store`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<StoreDTO[]>(response);
-  }
+  getStores = this.storeService.getStores.bind(this.storeService);
 
   // Company Info Management
-  async getAllCompanyInfo(page?: number, pageSize?: number): Promise<ApiResponse<any>> {
-    let url = `${this.BASE_URL}/company-info`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async createCompanyInfo(companyData: any): Promise<ApiResponse<any>> {
-    const response = await fetch(`${this.BASE_URL}/company-info`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(companyData)
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async updateCompanyInfo(id: number, companyData: any): Promise<ApiResponse<any>> {
-    const response = await fetch(`${this.BASE_URL}/company-info/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(companyData)
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async uploadCompanyLogo(id: number, formData: FormData): Promise<ApiResponse<any>> {
-    const response = await fetch(`${this.BASE_URL}/company-info/upload-logo/${id}`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<any>(response);
-  }
-
-  async hardDeleteCompanyInfo(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/company-info/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getAllCompanyInfo = this.companyService.getAllCompanyInfo.bind(this.companyService);
+  createCompanyInfo = this.companyService.createCompanyInfo.bind(this.companyService);
+  updateCompanyInfo = this.companyService.updateCompanyInfo.bind(this.companyService);
+  uploadCompanyLogo = this.companyService.uploadCompanyLogo.bind(this.companyService);
+  hardDeleteCompanyInfo = this.companyService.hardDeleteCompanyInfo.bind(this.companyService);
 
   // Billing Management
-  async getBillings(page?: number, pageSize?: number): Promise<ApiResponse<BillingDTO[]>> {
-    let url = `${this.BASE_URL}/billing`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<BillingDTO[]>(response);
-  }
-
-  async createBilling(billing: Omit<BillingDTO, 'billingId'>): Promise<ApiResponse<BillingDTO>> {
-    const response = await fetch(`${this.BASE_URL}/billing`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(billing)
-    });
-    return this.handleResponse<BillingDTO>(response);
-  }
-
-  async updateBilling(id: number, billing: Partial<BillingDTO>): Promise<ApiResponse<BillingDTO>> {
-    const response = await fetch(`${this.BASE_URL}/billing/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(billing)
-    });
-    return this.handleResponse<BillingDTO>(response);
-  }
-
-  async deleteBilling(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/billing/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+  getBillings = this.billingService.getBillings.bind(this.billingService);
+  createBilling = this.billingService.createBilling.bind(this.billingService);
+  updateBilling = this.billingService.updateBilling.bind(this.billingService);
+  deleteBilling = this.billingService.deleteBilling.bind(this.billingService);
 
   // Transaction Management
-  async getTransactions(page?: number, pageSize?: number): Promise<ApiResponse<TransactionDTO[]>> {
-    let url = `${this.BASE_URL}/transaction`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<TransactionDTO[]>(response);
-  }
-
-  async getTransactionById(id: number): Promise<ApiResponse<TransactionDTO>> {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  async createTransaction(transaction: Omit<TransactionDTO, 'transactionId'>): Promise<ApiResponse<TransactionDTO>> {
-    const response = await fetch(`${this.BASE_URL}/transaction`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(transaction)
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  async updateTransaction(id: number, transaction: Partial<TransactionDTO>): Promise<ApiResponse<TransactionDTO>> {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(transaction)
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  async deleteTransaction(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async updateTransactionStatus(id: number, status: string): Promise<ApiResponse<TransactionDTO>> {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}/status`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ status })
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  // Generic request method for pages that use it
-  async request(endpoint: string, options?: RequestInit): Promise<any> {
-    const response = await fetch(`${this.BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getAuthHeaders(),
-        ...options?.headers
-      }
-    });
-    return this.handleResponse<any>(response);
-  }
+  getTransactions = this.transactionService.getTransactions.bind(this.transactionService);
+  getTransactionById = this.transactionService.getTransactionById.bind(this.transactionService);
+  createTransaction = this.transactionService.createTransaction.bind(this.transactionService);
+  updateTransaction = this.transactionService.updateTransaction.bind(this.transactionService);
+  deleteTransaction = this.transactionService.deleteTransaction.bind(this.transactionService);
+  updateTransactionStatus = this.transactionService.updateTransactionStatus.bind(this.transactionService);
 }
 
 export const apiService = new ApiService();
