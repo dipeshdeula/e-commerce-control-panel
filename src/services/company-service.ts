@@ -1,5 +1,5 @@
 
-import { BaseApiService } from './base-api';
+import { BaseApiService } from '@/shared/services/base-api';
 
 export class CompanyService extends BaseApiService {
   async getAllCompanyInfo(page?: number, pageSize?: number) {

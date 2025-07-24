@@ -1,5 +1,5 @@
 
-import { BaseApiService } from './base-api';
+import { BaseApiService } from '@/shared/services/base-api';
 import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, VerifyOTPRequest, VerifyOTPResponse } from '@/types/api';
 
 export class AuthService extends BaseApiService {

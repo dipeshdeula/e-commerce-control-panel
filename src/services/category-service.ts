@@ -1,5 +1,5 @@
 
-import { BaseApiService } from './base-api';
+import { BaseApiService } from '@/shared/services/base-api';
 import { CategoryDTO, SubCategoryDTO, SubSubCategoryDTO } from '@/types/api';
 
 export class CategoryService extends BaseApiService {

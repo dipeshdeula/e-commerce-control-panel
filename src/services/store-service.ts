@@ -1,5 +1,5 @@
 
-import { BaseApiService } from './base-api';
+import { BaseApiService } from '@/shared/services/base-api';
 import { StoreDTO } from '@/types/api';
 
 export class StoreService extends BaseApiService {

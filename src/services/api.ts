@@ -1,5 +1,5 @@
 
-import { BaseApiService } from './base-api';
+import { BaseApiService } from '@/shared/services/base-api';
 import { AuthService } from './auth-service';
 import { DashboardService } from './dashboard-service';
 import { UserService } from './user-service';

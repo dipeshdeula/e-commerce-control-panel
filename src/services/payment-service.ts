@@ -1,5 +1,5 @@
 
-import { BaseApiService } from './base-api';
+import { BaseApiService } from '@/shared/services/base-api';
 import { PaymentMethodDTO, PaymentRequestDTO } from '@/types/api';
 
 export class PaymentService extends BaseApiService {
