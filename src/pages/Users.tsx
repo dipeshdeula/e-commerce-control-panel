@@ -78,7 +78,7 @@ export const Users: React.FC = () => {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => apiService.register(data),
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       if (response.success && response.data) {
         const responseData = response.data as any;
         if (responseData.requiresOTP || responseData.requiresVerification) {
