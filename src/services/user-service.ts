@@ -4,13 +4,14 @@ import { UserListDTO, Role, UpdateUserRoleResponse } from '@/types/api';
 
 export class UserService extends BaseApiService {
   async getUsers(page?: number, pageSize?: number) {
-    let url = `${this.BASE_URL}/User/getAllUsers`;
+    let url = `${this.BASE_URL}/user/getUsers`;
     if (page && pageSize) {
       url += `?page=${page}&pageSize=${pageSize}`;
     }
     const response = await fetch(url, {
       headers: this.getAuthHeaders()
     });
+    console.log('Response from getUsers:', response);
     return this.handleResponse<UserListDTO[]>(response);
   }
 

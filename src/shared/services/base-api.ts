@@ -5,7 +5,7 @@ interface ApiResponse<T> {
 }
 
 export class BaseApiService {
-  public BASE_URL = 'http://110.34.2.30:5013/api';
+  public BASE_URL = 'http://110.34.2.30:5013';
 
   protected getAuthHeaders() {
     const token = localStorage.getItem('accessToken');
