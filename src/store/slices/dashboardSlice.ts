@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiService } from '@/services/api';
-import { AdminDashboardDTO } from '@/types/api';
+import { DashboardService } from '@/features/dashboard/services/dashboard.service';
+import { DashboardData } from '@/features/dashboard/types/dashboard.types';
 
 interface DashboardState {
-  data: AdminDashboardDTO | null;
+  data: DashboardData | null;
   loading: boolean;
   error: string | null;
   lastUpdated: number | null;
@@ -21,7 +21,8 @@ export const fetchDashboardData = createAsyncThunk(
   'dashboard/fetchData',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiService.getDashboard();
+      const dashboardService = new DashboardService();
+      const response = await dashboardService.getDashboard();
       if (response.success && response.data) {
         return response.data;
       }
