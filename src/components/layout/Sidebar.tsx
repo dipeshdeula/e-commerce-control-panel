@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   Package, 
@@ -19,7 +19,10 @@ import {
   Package2,
   FolderPlus,
   Layers,
-  Box
+  Box,
+  User,
+  Crown,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +37,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { useAppDispatch, useAppSelector } from '@/store';
+import { logoutUser } from '@/store/slices/authSlice';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -66,6 +72,9 @@ const navigation = [
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { user, loading } = useAppSelector(state => state.auth);
   const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory', 'Payments']);
 
   const toggleExpanded = (itemName: string) => {
@@ -83,9 +92,37 @@ export const Sidebar: React.FC = () => {
     return false;
   };
 
-  const handleLogout = () => {
-    // Simple logout - could redirect to login page or refresh
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if logout fails, redirect to login
+      navigate('/login');
+    }
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'SuperAdmin':
+        return <Crown className="w-3 h-3" />;
+      case 'Admin':
+        return <ShieldCheck className="w-3 h-3" />;
+      default:
+        return <User className="w-3 h-3" />;
+    }
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'SuperAdmin':
+        return 'default'; // Gold/yellow variant
+      case 'Admin':
+        return 'secondary'; // Blue variant
+      default:
+        return 'outline';
+    }
   };
 
   const renderNavItem = (item: any) => {
@@ -183,15 +220,41 @@ export const Sidebar: React.FC = () => {
         {navigation.map(renderNavItem)}
       </nav>
       
+      {/* User Section */}
+      {user && (
+        <div className="px-4 py-3 border-t border-gray-200">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              {user.name?.charAt(0).toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {user.name || 'Unknown User'}
+              </p>
+              <div className="flex items-center space-x-1">
+                <Badge 
+                  variant={getRoleBadgeVariant(user.role)} 
+                  className="text-xs px-1.5 py-0.5 h-auto"
+                >
+                  {getRoleIcon(user.role)}
+                  <span className="ml-1">{user.role}</span>
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="px-4 py-4 border-t border-gray-200 space-y-2">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-700 transition-all duration-200 justify-start"
+              disabled={loading}
+              className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-700 transition-all duration-200 justify-start disabled:opacity-50"
             >
               <LogOut className="w-5 h-5 mr-3" />
-              Logout
+              {loading ? 'Logging out...' : 'Logout'}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent className="sm:max-w-md">
@@ -205,12 +268,13 @@ export const Sidebar: React.FC = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
               >
-                Yes, Logout
+                {loading ? 'Logging out...' : 'Yes, Logout'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

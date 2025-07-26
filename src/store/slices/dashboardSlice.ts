@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { DashboardService } from '@/features/dashboard/services/dashboard.service';
+import { DashboardService } from '@/services/dashboard-service';
 import { DashboardData } from '@/features/dashboard/types/dashboard.types';
 
 interface DashboardState {
@@ -23,12 +23,20 @@ export const fetchDashboardData = createAsyncThunk(
     try {
       const dashboardService = new DashboardService();
       const response = await dashboardService.getDashboard();
+      console.log('Dashboard fetch response:', response);
+      
       if (response.success && response.data) {
         return response.data;
       }
+      
       return rejectWithValue(response.message || 'Failed to fetch dashboard data');
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Network error');
+      console.error('Dashboard fetch error:', error);
+      return rejectWithValue(
+        error.response?.data?.message || 
+        error.message || 
+        'Network error occurred while fetching dashboard data'
+      );
     }
   }
 );

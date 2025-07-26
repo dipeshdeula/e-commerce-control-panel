@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/config/api.config';
+import { createAuthInterceptor, isTokenExpired } from '@/utils/authInterceptor';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -44,6 +45,22 @@ export class BaseApiService {
 
   async request(endpoint: string, options?: RequestInit): Promise<any> {
     try {
+      // Check if token is expired before making request
+      const token = localStorage.getItem('accessToken');
+      if (token && isTokenExpired(token) && !endpoint.includes('/auth/')) {
+        // Try to refresh token
+        try {
+          await createAuthInterceptor({ endpoint, options });
+        } catch (error) {
+          // If refresh fails, redirect to login
+          window.location.href = '/login';
+          return {
+            success: false,
+            message: 'Session expired. Please login again.'
+          };
+        }
+      }
+
       const response = await fetch(`${this.BASE_URL}${endpoint}`, {
         ...options,
         mode: 'cors',
@@ -52,6 +69,22 @@ export class BaseApiService {
           ...options?.headers
         }
       });
+
+      // Handle 401 unauthorized responses
+      if (response.status === 401 && !endpoint.includes('/auth/')) {
+        try {
+          await createAuthInterceptor({ endpoint, options });
+          // Retry the original request with new token
+          return this.request(endpoint, options);
+        } catch (error) {
+          window.location.href = '/login';
+          return {
+            success: false,
+            message: 'Session expired. Please login again.'
+          };
+        }
+      }
+
       return this.handleResponse<any>(response);
     } catch (error) {
       console.error('API Request failed:', error);

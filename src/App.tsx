@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
 import { Products } from "@/pages/Products";
@@ -22,152 +23,211 @@ import { Notifications } from "@/pages/Notifications";
 import { CompanyInfo } from "@/pages/CompanyInfo";
 import { Reports } from "@/pages/Reports";
 import NotFound from "./pages/NotFound";
+import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { useAppSelector } from "./store";
+import { Loader2 } from "lucide-react";
+import { setupTokenRefresh } from "@/utils/authInterceptor";
+import { useEffect } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    },
+  },
+});
 
 const App = () => {
+  useEffect(() => {
+    // Setup automatic token refresh
+    setupTokenRefresh();
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 };
 
 const AppContent = () => {
-  const { isAuthenticated } = useAppSelector(state => state.auth);
+  const { isAuthenticated, loading, user } = useAppSelector(state => state.auth);
 
-  if (!isAuthenticated) {
-    return <Login />;
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
     <Routes>
+      {/* Public route */}
+      <Route path="/login" element={<Login />} />
+      
+      {/* Protected routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route
         path="/dashboard"
         element={
-          <Layout>
-            <Dashboard />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/users"
         element={
-          <Layout>
-            <Users />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Users />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/categories"
         element={
-          <Layout>
-            <Categories />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Categories />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/subcategories"
         element={
-          <Layout>
-            <SubCategories />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <SubCategories />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/subsubcategories"
         element={
-          <Layout>
-            <SubSubCategories />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <SubSubCategories />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/products"
         element={
-          <Layout>
-            <Products />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Products />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/orders"
         element={
-          <Layout>
-            <Orders />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Orders />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/stores"
         element={
-          <Layout>
-            <Stores />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Stores />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/payments"
         element={
-          <Layout>
-            <Payments />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Payments />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/payment-methods"
         element={
-          <Layout>
-            <PaymentMethods />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <PaymentMethods />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/payment-requests"
         element={
-          <Layout>
-            <PaymentRequests />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <PaymentRequests />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/company-info"
         element={
-          <Layout>
-            <CompanyInfo />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <CompanyInfo />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/reports"
         element={
-          <Layout>
-            <Reports />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Reports />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/notifications"
         element={
-          <Layout>
-            <Notifications />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Notifications />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/settings"
         element={
-          <Layout>
-            <Settings />
-          </Layout>
+          <ProtectedRoute>
+            <Layout>
+              <Settings />
+            </Layout>
+          </ProtectedRoute>
         }
       />
       <Route path="*" element={<NotFound />} />

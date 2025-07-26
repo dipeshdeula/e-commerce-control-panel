@@ -21,6 +21,42 @@ export class AuthService extends BaseApiService {
     }
   }
 
+  async refreshToken(refreshToken: string) {
+    try {
+      const response = await fetch(`${this.BASE_URL}/auth/refresh-token`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ refreshToken })
+      });
+      return this.handleResponse<{ accessToken: string; refreshToken: string; expiresIn: number }>(response);
+    } catch (error) {
+      console.error('Token refresh request failed:', error);
+      return {
+        success: false,
+        message: `Token refresh failed: ${error instanceof Error ? error.message : 'Network error'}`
+      };
+    }
+  }
+
+  async logout(refreshToken: string) {
+    try {
+      const response = await fetch(`${this.BASE_URL}/auth/logout`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ refreshToken })
+      });
+      return this.handleResponse<{ message: string }>(response);
+    } catch (error) {
+      console.error('Logout request failed:', error);
+      return {
+        success: false,
+        message: `Logout failed: ${error instanceof Error ? error.message : 'Network error'}`
+      };
+    }
+  }
+
   async register(userData: RegisterRequest) {
     try {
       const response = await fetch(`${this.BASE_URL}/auth/register`, {

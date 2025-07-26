@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import { adminApi } from './api/adminApi';
 import authSlice from './slices/authSlice';
 import dashboardSlice from './slices/dashboardSlice';
 import userSlice from './slices/userSlice';
@@ -14,6 +15,10 @@ import transactionSlice from './slices/transactionSlice';
 
 export const store = configureStore({
   reducer: {
+    // 🏭 RTK Query API slice for production dashboard
+    [adminApi.reducerPath]: adminApi.reducer,
+    
+    // Existing Redux slices
     auth: authSlice,
     dashboard: dashboardSlice,
     users: userSlice,
@@ -29,9 +34,11 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+        ignoredPaths: ['register'],
       },
-    }),
+    }).concat(adminApi.middleware), // Add RTK Query middleware
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
 export type RootState = ReturnType<typeof store.getState>;

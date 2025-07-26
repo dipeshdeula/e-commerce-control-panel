@@ -39,7 +39,7 @@ const getApiConfig = (): ApiConfig => {
 export const API_CONFIG = getApiConfig();
 
 // Export the full API URL
-export const API_BASE_URL = `${API_CONFIG.baseUrl}${API_CONFIG.apiPath}`;
+export const API_BASE_URL = `${API_CONFIG.baseUrl}`;
 
 // Helper function to get the current environment
 export const getCurrentEnvironment = () => {
