@@ -44,16 +44,24 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
-          <p className="text-muted-foreground">
-            Welcome back! Here's what's happening with your store today.
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary-blue bg-clip-text text-transparent">
+            InstantMart Dashboard
+          </h1>
+          <p className="text-muted-foreground text-lg mt-2">
+            Welcome back! Here's what's happening with your marketplace today.
           </p>
         </div>
-        <Button onClick={refetch} variant="outline" size="sm">
+        <Button 
+          onClick={refetch} 
+          variant="outline" 
+          size="lg"
+          className="border-primary/20 hover:bg-primary/10 hover:border-primary/40 transition-all duration-200"
+        >
+          <Loader2 className="mr-2 h-4 w-4" />
           Refresh Data
         </Button>
       </div>

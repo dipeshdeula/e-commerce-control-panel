@@ -49,38 +49,44 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Admin Login</CardTitle>
-          <CardDescription className="text-center">
+    <div className="min-h-screen flex items-center justify-center gradient-primary p-4">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
+        <CardHeader className="space-y-1 text-center pb-8">
+          <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4">
+            <span className="text-2xl font-bold text-primary-foreground">IM</span>
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-blue bg-clip-text text-transparent">
+            InstantMart Admin
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-base">
             Enter your credentials to access the admin panel
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="border-destructive/20 bg-destructive/10">
+                <AlertDescription className="text-destructive">{error}</AlertDescription>
               </Alert>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">Email Address</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="admin@instantmart.com"
                 value={formData.email}
                 onChange={handleChange}
                 required
                 disabled={loading}
+                className="h-12 bg-background border-2 border-border focus:border-primary transition-colors"
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-3">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -90,21 +96,22 @@ export const Login: React.FC = () => {
                 onChange={handleChange}
                 required
                 disabled={loading}
+                className="h-12 bg-background border-2 border-border focus:border-primary transition-colors"
               />
             </div>
             
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 transform hover:scale-[1.02]" 
               disabled={loading || !formData.email || !formData.password}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Signing in...
                 </>
               ) : (
-                'Sign In'
+                'Sign In to Dashboard'
               )}
             </Button>
           </form>

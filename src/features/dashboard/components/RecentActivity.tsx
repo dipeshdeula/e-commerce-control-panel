@@ -10,23 +10,31 @@ interface RecentActivityProps {
 export const RecentActivity: React.FC<RecentActivityProps> = ({ data }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
+      <Card className="shadow-lg border-primary/10 hover:shadow-xl transition-all duration-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold text-primary">Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {data.recentOrders?.slice(0, 5).map((order) => (
-              <div key={order.orderId} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={order.orderId} className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/30 transition-colors">
                 <div>
-                  <p className="text-sm font-medium">Order #{order.orderId}</p>
+                  <p className="text-sm font-semibold text-foreground">Order #{order.orderId}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(order.orderDate).toLocaleDateString()}
+                    {new Date(order.orderDate).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold">₹{order.amount.toLocaleString()}</p>
-                  <Badge variant={order.status === 'Confirmed' ? 'default' : 'secondary'}>
+                  <p className="text-sm font-bold text-primary">₹{order.amount.toLocaleString()}</p>
+                  <Badge 
+                    variant={order.status === 'Confirmed' ? 'default' : order.status === 'COMPLETED' ? 'default' : 'secondary'}
+                    className="mt-1"
+                  >
                     {order.status}
                   </Badge>
                 </div>
@@ -36,20 +44,20 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({ data }) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Selling Products</CardTitle>
+      <Card className="shadow-lg border-green-500/10 hover:shadow-xl transition-all duration-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold text-green-600">Top Selling Products</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {data.topSellingProducts?.slice(0, 5).map((product) => (
-              <div key={product.productId} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={product.productId} className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/30 transition-colors">
                 <div>
-                  <p className="text-sm font-medium">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">Sold: {product.soldQuantity}</p>
+                  <p className="text-sm font-semibold text-foreground">{product.name}</p>
+                  <p className="text-xs text-muted-foreground">Sold: {product.soldQuantity} units</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold">₹{product.totalSales.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-green-600">₹{product.totalSales.toLocaleString()}</p>
                 </div>
               </div>
             ))}
@@ -57,25 +65,25 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({ data }) => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Stores by Income</CardTitle>
+      <Card className="shadow-lg border-purple-500/10 hover:shadow-xl transition-all duration-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-semibold text-purple-600">Top Stores by Revenue</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {data.topStoresByIncome?.slice(0, 5).map((store) => (
-              <div key={store.storeId} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={store.storeId} className="flex items-center justify-between p-4 border border-border/50 rounded-lg hover:bg-muted/30 transition-colors">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <span className="text-sm font-bold">{store.storeName.charAt(0)}</span>
+                  <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">{store.storeName.charAt(0)}</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{store.storeName}</p>
+                    <p className="text-sm font-semibold text-foreground">{store.storeName}</p>
                     <p className="text-xs text-muted-foreground">{store.ownerName}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold">₹{store.totalIncome.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-purple-600">₹{store.totalIncome.toLocaleString()}</p>
                 </div>
               </div>
             ))}
