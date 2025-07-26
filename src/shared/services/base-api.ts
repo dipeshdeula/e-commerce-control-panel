@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '@/config/api.config';
+
 interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -5,13 +7,15 @@ interface ApiResponse<T> {
 }
 
 export class BaseApiService {
-  public BASE_URL = 'http://110.34.2.30:5013';
+  public BASE_URL = API_BASE_URL;
 
   protected getAuthHeaders() {
     const token = localStorage.getItem('accessToken');
     return {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
+      'Accept': 'application/json',
+      'Access-Control-Allow-Origin': '*',
     };
   }
 
@@ -39,13 +43,22 @@ export class BaseApiService {
   }
 
   async request(endpoint: string, options?: RequestInit): Promise<any> {
-    const response = await fetch(`${this.BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getAuthHeaders(),
-        ...options?.headers
-      }
-    });
-    return this.handleResponse<any>(response);
+    try {
+      const response = await fetch(`${this.BASE_URL}${endpoint}`, {
+        ...options,
+        mode: 'cors',
+        headers: {
+          ...this.getAuthHeaders(),
+          ...options?.headers
+        }
+      });
+      return this.handleResponse<any>(response);
+    } catch (error) {
+      console.error('API Request failed:', error);
+      return {
+        success: false,
+        message: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
   }
 }
