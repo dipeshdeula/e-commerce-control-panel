@@ -22,8 +22,8 @@ const getApiConfig = (): ApiConfig => {
 
   // Local development API (adjust these URLs for your local setup)
   const localConfig: ApiConfig = {
-    baseUrl: 'http://localhost:5225', // Adjust this to your local API port
-    apiPath: ''
+    baseUrl: 'https://localhost:7028',
+    apiPath: '/api'
   };
 
   // Return appropriate config based on environment
