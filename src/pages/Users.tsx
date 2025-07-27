@@ -63,6 +63,7 @@ import {
   Phone,
   MapPin
 } from 'lucide-react';
+import { API_BASE_URL } from '@/config/api.config';
 
 interface UserFormValues {
   name: string;
@@ -84,7 +85,7 @@ interface User {
   isActive: boolean;
   isDeleted?: boolean;
   createdAt?: string;
-  profileImage?: string;
+  imageUrl?: string;
 }
 
 export const Users: React.FC = () => {
@@ -580,13 +581,29 @@ export const Users: React.FC = () => {
                   console.log("role info:", roleInfo);
                   const userPhone = user.phone || user.contact;
                   const userId = user.id || user.userId;
+                  const userImage = user.imageUrl || '';
+                  console.log("user image:", userImage);
+                  console.log("API_BASE_URL:", API_BASE_URL);
+                  console.log("Full image URL:", userImage ? `${API_BASE_URL}/${userImage}` : 'No image');
                   
                   return (
                     <TableRow key={userId || user.email} className="hover:bg-gray-50/50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center">
-                            <UsersIcon className="w-5 h-5 text-blue-600" />
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
+                            {user.imageUrl ? (
+                              <img 
+                                src={`${API_BASE_URL}/${user.imageUrl}`} 
+                                alt={user.name} 
+                                className="w-10 h-10 rounded-full object-cover"
+                                onError={(e) => {
+                                  console.error('Failed to load image:', `${API_BASE_URL}/${user.imageUrl}`);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <UsersIcon className="w-5 h-5 text-blue-600" />
+                            )}
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">{user.name || 'Unknown User'}</p>

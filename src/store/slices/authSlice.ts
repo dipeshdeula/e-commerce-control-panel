@@ -5,11 +5,13 @@ import { apiService } from '@/services/api';
 const decodeToken = (token: string) => {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
+    console.log('JWT payload decoded:', payload);
     return {
       userId: payload.nameid,
       email: payload.email,
       name: payload.unique_name,
       role: payload.role,
+      actort: payload.actort, // Add the image URL
       exp: payload.exp
     };
   } catch (error) {
@@ -30,6 +32,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  actort?:string;
 }
 
 interface AuthState {
@@ -60,7 +63,8 @@ const initializeAuthState = (): AuthState => {
         userId: decoded.userId,
         email: decoded.email,
         name: decoded.name,
-        role: decoded.role
+        role: decoded.role,
+        actort: decoded.actort
       };
       isAuthenticated = true;
       tokenExpiry = decoded.exp;
@@ -222,7 +226,8 @@ const authSlice = createSlice({
           userId: decoded.userId,
           email: decoded.email,
           name: decoded.name,
-          role: decoded.role
+          role: decoded.role,
+          actort: decoded.actort
         };
         state.isAuthenticated = true;
         localStorage.setItem('accessToken', accessToken);
@@ -251,7 +256,8 @@ const authSlice = createSlice({
               userId: decoded.userId,
               email: decoded.email,
               name: decoded.name,
-              role: decoded.role
+              role: decoded.role,
+              actort: decoded.actort
             };
             state.accessToken = data.accessToken;
             state.refreshToken = data.refreshToken;
@@ -284,7 +290,8 @@ const authSlice = createSlice({
               userId: decoded.userId,
               email: decoded.email,
               name: decoded.name,
-              role: decoded.role
+              role: decoded.role,
+              actort: decoded.actort
             };
             localStorage.setItem('accessToken', data.accessToken);
             localStorage.setItem('refreshToken', data.refreshToken);
@@ -351,7 +358,8 @@ const authSlice = createSlice({
               userId: decoded.userId,
               email: decoded.email,
               name: decoded.name,
-              role: decoded.role
+              role: decoded.role,
+              actort: decoded.actort
             };
             state.accessToken = data.accessToken;
             state.refreshToken = data.refreshToken;
@@ -382,7 +390,8 @@ const authSlice = createSlice({
               userId: decoded.userId,
               email: decoded.email,
               name: decoded.name,
-              role: decoded.role
+              role: decoded.role,
+              actort: decoded.actort
             };
             state.accessToken = data.accessToken;
             state.refreshToken = data.refreshToken;

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bell, Search, User, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, Search, User, LogOut, ChevronDown, UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,11 +15,19 @@ import { Badge } from '@/components/ui/badge';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logoutUser } from '@/store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/config/api.config';
 
 export const Topbar: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { user, loading } = useAppSelector(state => state.auth);
+  const userImage = user?.actort;
+  
+  console.log('Full user object:', user);
+  console.log('User actort property:', user?.actort);
+  console.log('API_BASE_URL:', API_BASE_URL);
+  console.log('User Image:', userImage ? `${API_BASE_URL}/${userImage}` : 'No image');
+
 
   const handleLogout = async () => {
     try {
@@ -71,10 +79,25 @@ export const Topbar: React.FC = () => {
         </Button>
         
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild>            
             <Button variant="ghost" className="flex items-center space-x-3 h-auto p-2">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
-                <User className="h-4 w-4" />
+              <div className="h-8 w-8 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200">
+                {user?.actort ? (
+                  <img 
+                    src={`${API_BASE_URL}/${user.actort}`} 
+                    alt={user?.name || 'User'} 
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => {
+                      console.error('Topbar image failed to load:', `${API_BASE_URL}/${user.actort}`);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log('Topbar image loaded successfully:', `${API_BASE_URL}/${user.actort}`);
+                    }}
+                  />
+                ) : (
+                  <User className="w-4 h-4 text-blue-600" />
+                )}
               </div>
               <div className="hidden md:block text-left">
                 <div className="flex items-center gap-2">
