@@ -197,17 +197,85 @@ export interface TopStoreDTO {
 }
 
 // Products
-export interface ProductDTO {
-  productId: number;
-  name: string;
-  description: string;
-  price: number;
-  stockQuantity: number;
-  categoryId: number;
-  subCategoryId?: number;
-  subSubCategoryId?: number;
+export interface ProductImageDTO {
+  id: number;
   imageUrl: string;
-  isActive: boolean;
+  productId: number;
+  altText: string;
+  isMain: boolean;
+  displayOrder: number;
+}
+
+export interface ProductPricingDTO {
+  productId: number;
+  originalPrice: number;
+  basePrice: number;
+  effectivePrice: number;
+  productDiscountAmount: number;
+  eventDiscountAmount: number;
+  totalDiscountAmount: number;
+  totalDiscountPercentage: number;
+  hasProductDiscount: boolean;
+  hasEventDiscount: boolean;
+  hasAnyDiscount: boolean;
+  isOnSale: boolean;
+  activeEventId?: number;
+  activeEventName?: string;
+  eventTagLine?: string;
+  promotionType?: string;
+  eventStartDate?: string;
+  eventEndDate?: string;
+  hasActiveEvent: boolean;
+  isEventActive: boolean;
+  eventTimeRemaining?: string;
+  isEventExpiringSoon: boolean;
+  formattedOriginalPrice: string;
+  formattedEffectivePrice: string;
+  formattedSavings: string;
+  formattedDiscountBreakdown: string;
+  eventStatus: string;
+  isPriceStable: boolean;
+  calculatedAt: string;
+}
+
+export interface ProductDTO {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  marketPrice: number;
+  costPrice: number;
+  discountPrice: number;
+  discountPercentage?: number;
+  stockQuantity: number;
+  reservedStock: number;
+  sku: string;
+  weight: string;
+  reviews: number;
+  rating: number;
+  dimensions: string;
+  isDeleted: boolean;
+  categoryId: number;
+  subSubCategoryId?: number;
+  availableStock: number;
+  isInStock: boolean;
+  hasProductDiscount: boolean;
+  basePrice: number;
+  productDiscountAmount: number;
+  formattedMarketPrice: string;
+  formattedBasePrice: string;
+  formattedDiscountAmount: string;
+  stockStatus: string;
+  images: ProductImageDTO[];
+  pricing?: ProductPricingDTO;
+  stock?: any;
+  currentPrice: number;
+  isOnSale: boolean;
+  canAddToCart: boolean;
+  displayPrice: string;
+  displayStatus: string;
+  totalSavingsAmount: number;
+  formattedSavings: string;
 }
 
 export interface ProductListResponse {

@@ -8,7 +8,7 @@ import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
-import { Products } from "@/pages/Products";
+import Products from "@/pages/Products";
 import { Categories } from "@/pages/Categories";
 import { SubCategories } from "@/pages/SubCategories";
 import { SubSubCategories } from "@/pages/SubSubCategoriesNew";

@@ -1,11 +1,14 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService } from '@/services/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { apiService as api } from '../services/api';
+import { ProductDTO } from '../types/api';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
 import {
   Table,
   TableBody,
@@ -13,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '../components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -22,179 +25,320 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from '../components/ui/dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Badge } from '../components/ui/badge';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Search, RotateCcw } from 'lucide-react';
+} from '../components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../components/ui/tooltip';
+import { 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
+  Upload, 
+  RefreshCw,
+  Star,
+  Package,
+  RotateCcw,
+  AlertTriangle
+} from 'lucide-react';
+import { toast } from '../hooks/use-toast';
 
-export const Products: React.FC = () => {
+const Products = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductDTO | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [goToPage, setGoToPage] = useState('');
+  
   const [formData, setFormData] = useState({
     name: '',
-    slug: '',
     description: '',
     marketPrice: '',
     costPrice: '',
-    discountPrice: '',
+    discountPercentage: '',
     stockQuantity: '',
     sku: '',
     weight: '',
     dimensions: '',
-    categoryId: '',
-    subCategoryId: '',
-    subSubCategoryId: '',
+    subSubCategoryId: ''
   });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
 
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['products', currentPage, pageSize],
-    queryFn: () => apiService.getProducts(currentPage, pageSize),
+  // Fetch products
+  const { data: products, isLoading, refetch } = useQuery({
+    queryKey: ['products', currentPage, pageSize, searchTerm],
+    queryFn: () => api.getProducts({ 
+      page: currentPage, 
+      size: pageSize,
+      searchTerm: searchTerm || undefined
+    }),
+    placeholderData: (previousData) => previousData
   });
 
-  const { data: categories } = useQuery({
-    queryKey: ['categories-all'],
-    queryFn: () => apiService.getCategories(1, 100),
-  });
-
-  const { data: subCategories } = useQuery({
-    queryKey: ['subcategories-all'],
-    queryFn: () => apiService.getSubCategories(1, 100),
-  });
-
-  const { data: subSubCategories } = useQuery({
-    queryKey: ['subsubcategories-all'],
-    queryFn: () => apiService.getSubSubCategories(1, 100),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) => apiService.createProduct(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      setIsCreateOpen(false);
-      resetForm();
-      toast({ title: 'Product created successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error creating product', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => apiService.updateProduct(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      setIsEditOpen(false);
-      resetForm();
-      toast({ title: 'Product updated successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error updating product', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const softDeleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.softDeleteProduct(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Product soft deleted successfully' });
-    },
-  });
-
-  const hardDeleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.hardDeleteProduct(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({ title: 'Product permanently deleted' });
-    },
-  });
+  console.log("Products data:", products);
 
   const resetForm = () => {
     setFormData({
       name: '',
-      slug: '',
       description: '',
       marketPrice: '',
       costPrice: '',
-      discountPrice: '',
+      discountPercentage: '',
       stockQuantity: '',
       sku: '',
       weight: '',
       dimensions: '',
-      categoryId: '',
-      subCategoryId: '',
-      subSubCategoryId: '',
+      subSubCategoryId: ''
     });
-    setSelectedProduct(null);
   };
 
-  const handleEdit = (product: any) => {
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: (data: { subSubCategoryId: number; productData: any }) => 
+      api.createProduct(data.subSubCategoryId, data.productData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsCreateOpen(false);
+      resetForm();
+      toast({
+        title: "Success",
+        description: "Product created successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to create product",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => 
+      api.updateProduct(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsEditOpen(false);
+      setSelectedProduct(null);
+      resetForm();
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update product",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Soft delete mutation
+  const softDeleteMutation = useMutation({
+    mutationFn: api.softDeleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete product",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Restore mutation (undelete)
+  const restoreMutation = useMutation({
+    mutationFn: api.unDeleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: "Success",
+        description: "Product restored successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to restore product",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Hard delete mutation
+  const hardDeleteMutation = useMutation({
+    mutationFn: api.hardDeleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({
+        title: "Success",
+        description: "Product permanently deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to permanently delete product",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Image upload mutation
+  const uploadImagesMutation = useMutation({
+    mutationFn: ({ id, images }: { id: number; images: File[] }) => 
+      api.uploadProductImages(id.toString(), images),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsImageUploadOpen(false);
+      setSelectedImages([]);
+      setSelectedProduct(null);
+      toast({
+        title: "Success",
+        description: "Images uploaded successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to upload images",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const productData = {
+      name: formData.name,
+      slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
+      description: formData.description,
+      marketPrice: parseFloat(formData.marketPrice),
+      costPrice: parseFloat(formData.costPrice),
+      discountPercentage: formData.discountPercentage ? parseFloat(formData.discountPercentage) : 0,
+      stockQuantity: parseInt(formData.stockQuantity),
+      sku: formData.sku,
+      weight: formData.weight,
+      reviews: 0,
+      rating: 0,
+      dimensions: formData.dimensions,
+    };
+
+    if (selectedProduct) {
+      updateMutation.mutate({ id: selectedProduct.id, data: productData });
+    } else {
+      const subSubCategoryId = parseInt(formData.subSubCategoryId);
+      if (!subSubCategoryId) {
+        toast({
+          title: "Error",
+          description: "Please select a sub-subcategory",
+          variant: "destructive",
+        });
+        return;
+      }
+      createMutation.mutate({ subSubCategoryId, productData });
+    }
+  };
+
+  const handleEdit = (product: ProductDTO) => {
     setSelectedProduct(product);
     setFormData({
       name: product.name,
-      slug: product.slug,
-      description: product.description,
-      marketPrice: product.marketPrice?.toString() || '',
-      costPrice: product.costPrice?.toString() || '',
-      discountPrice: product.discountPrice?.toString() || '',
-      stockQuantity: product.stockQuantity?.toString() || '',
+      description: product.description || '',
+      marketPrice: product.marketPrice.toString(),
+      costPrice: product.costPrice.toString(),
+      discountPercentage: product.discountPercentage?.toString() || '',
+      stockQuantity: product.stockQuantity.toString(),
       sku: product.sku,
-      weight: product.weight,
-      dimensions: product.dimensions,
-      categoryId: product.categoryId?.toString() || '',
-      subCategoryId: product.subCategoryId?.toString() || '',
-      subSubCategoryId: product.subSubCategoryId?.toString() || '',
+      weight: product.weight || '',
+      dimensions: product.dimensions || '',
+      subSubCategoryId: product.subSubCategoryId?.toString() || ''
     });
     setIsEditOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const data = {
-      ...formData,
-      marketPrice: parseFloat(formData.marketPrice),
-      costPrice: parseFloat(formData.costPrice),
-      discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : null,
-      stockQuantity: parseInt(formData.stockQuantity),
-      categoryId: parseInt(formData.categoryId),
-      subCategoryId: formData.subCategoryId ? parseInt(formData.subCategoryId) : null,
-      subSubCategoryId: formData.subSubCategoryId ? parseInt(formData.subSubCategoryId) : null,
-    };
+  const handleImageUpload = (product: ProductDTO) => {
+    setSelectedProduct(product);
+    setIsImageUploadOpen(true);
+  };
 
-    if (selectedProduct) {
-      updateMutation.mutate({ ...data, id: selectedProduct.id });
-    } else {
-      createMutation.mutate(data);
+  const handleImageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedProduct && selectedImages.length > 0) {
+      uploadImagesMutation.mutate({ 
+        id: selectedProduct.id, 
+        images: selectedImages 
+      });
     }
   };
 
-  // Filter subcategories based on selected category
-  const filteredSubCategories = subCategories?.data?.filter((subCat: any) => 
-    subCat.categoryId === parseInt(formData.categoryId)
-  ) || [];
+  const handleGoToPage = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const page = parseInt(goToPage);
+      const totalPages = products?.data?.totalCount ? 
+        Math.ceil(products.data.totalCount / pageSize) : 1;
+      
+      if (page >= 1 && (!products?.data?.totalCount || page <= totalPages)) {
+        setCurrentPage(page);
+        setGoToPage('');
+      }
+    }
+  };
 
-  // Filter sub-subcategories based on selected subcategory
-  const filteredSubSubCategories = subSubCategories?.data?.filter((subSubCat: any) => 
-    subSubCat.subCategoryId === parseInt(formData.subCategoryId)
-  ) || [];
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
-  const filteredProducts = products?.data?.filter((product: any) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  // Calculate pagination info
+  const totalItems = products?.data?.totalCount || 0;
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 1;
+  const paginatedProducts = products?.data?.data || [];
+  const hasMorePages = paginatedProducts.length === pageSize;
 
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
@@ -207,109 +351,69 @@ export const Products: React.FC = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Products</h1>
           <p className="text-gray-600">Manage your product inventory</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>Create New Product</DialogTitle>
-                <DialogDescription>Add a new product to your inventory</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => resetForm()}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <form onSubmit={handleSubmit}>
+                <DialogHeader>
+                  <DialogTitle>Create New Product</DialogTitle>
+                  <DialogDescription>Add a new product to your inventory</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">Product Name</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Enter product name"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="sku">SKU</Label>
+                      <Input
+                        id="sku"
+                        value={formData.sku}
+                        onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                        placeholder="Enter SKU"
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="slug">Slug</Label>
+                    <Label htmlFor="subSubCategoryId">Sub-SubCategory ID</Label>
                     <Input
-                      id="slug"
-                      value={formData.slug}
-                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="marketPrice">Market Price</Label>
-                    <Input
-                      id="marketPrice"
+                      id="subSubCategoryId"
                       type="number"
-                      step="0.01"
-                      value={formData.marketPrice}
-                      onChange={(e) => setFormData({ ...formData, marketPrice: e.target.value })}
+                      value={formData.subSubCategoryId}
+                      onChange={(e) => setFormData({ ...formData, subSubCategoryId: e.target.value })}
+                      placeholder="Enter SubSubCategory ID"
                       required
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="costPrice">Cost Price</Label>
-                    <Input
-                      id="costPrice"
-                      type="number"
-                      step="0.01"
-                      value={formData.costPrice}
-                      onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="discountPrice">Discount Price</Label>
-                    <Input
-                      id="discountPrice"
-                      type="number"
-                      step="0.01"
-                      value={formData.discountPrice}
-                      onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="stockQuantity">Stock Quantity</Label>
-                    <Input
-                      id="stockQuantity"
-                      type="number"
-                      value={formData.stockQuantity}
-                      onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="sku">SKU</Label>
-                    <Input
-                      id="sku"
-                      value={formData.sku}
-                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="weight">Weight</Label>
                     <Input
                       id="weight"
                       value={formData.weight}
                       onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                      placeholder="Enter weight (e.g., 1kg, 500g)"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -318,159 +422,374 @@ export const Products: React.FC = () => {
                       id="dimensions"
                       value={formData.dimensions}
                       onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                      placeholder="Enter dimensions (e.g., 10x5x2 cm)"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Detailed product description"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="marketPrice">Market Price</Label>
+                      <Input
+                        id="marketPrice"
+                        type="number"
+                        step="0.01"
+                        value={formData.marketPrice}
+                        onChange={(e) => setFormData({ ...formData, marketPrice: e.target.value })}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="costPrice">Cost Price</Label>
+                      <Input
+                        id="costPrice"
+                        type="number"
+                        step="0.01"
+                        value={formData.costPrice}
+                        onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="discountPercentage">Discount %</Label>
+                      <Input
+                        id="discountPercentage"
+                        type="number"
+                        step="0.01"
+                        value={formData.discountPercentage}
+                        onChange={(e) => setFormData({ ...formData, discountPercentage: e.target.value })}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="stockQuantity">Stock Quantity</Label>
+                    <Input
+                      id="stockQuantity"
+                      type="number"
+                      value={formData.stockQuantity}
+                      onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
+                      placeholder="0"
+                      required
                     />
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="categoryId">Category</Label>
-                  <Select 
-                    value={formData.categoryId} 
-                    onValueChange={(value) => setFormData({ ...formData, categoryId: value, subCategoryId: '', subSubCategoryId: '' })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.data?.map((category: any) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.categoryId && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="subCategoryId">SubCategory</Label>
-                    <Select 
-                      value={formData.subCategoryId} 
-                      onValueChange={(value) => setFormData({ ...formData, subCategoryId: value, subSubCategoryId: '' })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a subcategory" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredSubCategories.map((subCategory: any) => (
-                          <SelectItem key={subCategory.id} value={subCategory.id.toString()}>
-                            {subCategory.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {formData.subCategoryId && (
-                  <div className="grid gap-2">
-                    <Label htmlFor="subSubCategoryId">SubSubCategory</Label>
-                    <Select 
-                      value={formData.subSubCategoryId} 
-                      onValueChange={(value) => setFormData({ ...formData, subSubCategoryId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a sub-subcategory" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredSubSubCategories.map((subSubCategory: any) => (
-                          <SelectItem key={subSubCategory.id} value={subSubCategory.id.toString()}>
-                            {subSubCategory.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create Product'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? 'Creating...' : 'Create Product'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Search className="w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="max-w-sm border-gray-200 focus:border-blue-400"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="pageSize" className="text-sm font-medium">Show:</Label>
+          <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+            <SelectTrigger className="w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+            {totalItems > 0 
+              ? `${totalItems} total products`
+              : `${paginatedProducts.length} products on this page`
+            }
+          </Badge>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Product List</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Products
+          </CardTitle>
           <CardDescription>
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
+            Manage your product inventory
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="rounded-lg border border-gray-200 overflow-hidden">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="font-semibold">Image</TableHead>
+                  <TableHead className="font-semibold">Product</TableHead>
+                  <TableHead className="font-semibold">SKU</TableHead>
+                  <TableHead className="font-semibold">Price</TableHead>
+                  <TableHead className="font-semibold">Stock</TableHead>
+                  <TableHead className="font-semibold">Rating</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
-              {filteredProducts.map((product: any) => (
-                <TableRow key={product.id}>
+              {paginatedProducts.map((product) => (
+                <TableRow key={product.id} className={product.isDeleted ? 'opacity-60 bg-red-50' : ''}>
                   <TableCell>
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-gray-500">{product.sku}</div>
-                    </div>
+                    {product.images && product.images.length > 0 ? (
+                      <img 
+                        src={product.images[0].imageUrl} 
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                        <Package className="w-6 h-6 text-gray-400" />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">Rs. {product.marketPrice}</div>
-                      {product.discountPrice && (
-                        <div className="text-sm text-green-600">Sale: Rs. {product.discountPrice}</div>
+                      <div className="font-medium">{product.name}</div>
+                      {product.description && (
+                        <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <code className="text-sm bg-gray-100 px-2 py-1 rounded">{product.sku}</code>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">${product.marketPrice}</div>
+                      {product.discountPrice > 0 && (
+                        <div className="text-sm text-green-600">${product.discountPrice}</div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.stockQuantity > 0 ? "default" : "destructive"}>
-                      {product.stockQuantity}
+                      {product.stockQuantity} in stock
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {categories?.data?.find((cat: any) => cat.id === product.categoryId)?.name || 'N/A'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.isInStock ? "default" : "secondary"}>
-                      {product.isInStock ? 'In Stock' : 'Out of Stock'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => softDeleteMutation.mutate(product.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <span>{product.rating || 0}</span>
+                      <span className="text-gray-400">({product.reviewCount || 0})</span>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={product.isDeleted ? "destructive" : "default"}>
+                      {product.isDeleted ? 'Deleted' : 'Active'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <div className="flex items-center gap-1">
+                        {!product.isDeleted ? (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                  onClick={() => handleEdit(product)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit Product</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                  onClick={() => handleImageUpload(product)}
+                                >
+                                  <Upload className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Upload Images</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 hover:bg-orange-50 hover:text-orange-600"
+                                  onClick={() => softDeleteMutation.mutate(product.id)}
+                                  disabled={softDeleteMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Move to Trash (Soft Delete)</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                onClick={() => restoreMutation.mutate(product.id)}
+                                disabled={restoreMutation.isPending}
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Restore Product</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              onClick={() => hardDeleteMutation.mutate(product.id)}
+                              disabled={hardDeleteMutation.isPending}
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Permanently Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500">
+                {products?.data?.totalCount ? (
+                  <>
+                    Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to{' '}
+                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} products
+                  </>
+                ) : (
+                  <>
+                    Showing {paginatedProducts.length} products on page {currentPage}
+                    {hasMorePages ? ' (more pages available)' : ''}
+                  </>
+                )}
+              </div>
+              {(totalPages > 1 || hasMorePages) && (
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="goToPage" className="text-sm">Go to page:</Label>
+                  <Input
+                    id="goToPage"
+                    type="number"
+                    min="1"
+                    max={products?.data?.totalCount ? totalPages : undefined}
+                    value={goToPage}
+                    onChange={(e) => setGoToPage(e.target.value)}
+                    onKeyDown={handleGoToPage}
+                    placeholder={products?.data?.totalCount ? `1-${totalPages}` : 'Enter page'}
+                    className="w-20 h-8 text-sm"
+                  />
+                </div>
+              )}
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(prev => prev - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+
+                {/* Simple pagination */}
+                {Array.from({ length: Math.min(5, totalPages || 1) }, (_, i) => {
+                  const pageNumber = i + 1;
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(pageNumber);
+                        }}
+                        isActive={currentPage === pageNumber}
+                        className="cursor-pointer"
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (products?.data?.totalCount) {
+                        if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
+                      } else {
+                        if (hasMorePages) setCurrentPage(prev => prev + 1);
+                      }
+                    }}
+                    className={
+                      products?.data?.totalCount 
+                        ? (currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
+                        : (!hasMorePages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </CardContent>
       </Card>
 
@@ -485,7 +804,7 @@ export const Products: React.FC = () => {
             <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-name">Name</Label>
+                  <Label htmlFor="edit-name">Product Name</Label>
                   <Input
                     id="edit-name"
                     value={formData.name}
@@ -494,14 +813,41 @@ export const Products: React.FC = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-slug">Slug</Label>
+                  <Label htmlFor="edit-sku">SKU</Label>
                   <Input
-                    id="edit-slug"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    id="edit-sku"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                     required
                   />
                 </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-subSubCategoryId">Sub-SubCategory ID</Label>
+                <Input
+                  id="edit-subSubCategoryId"
+                  type="number"
+                  value={formData.subSubCategoryId}
+                  onChange={(e) => setFormData({ ...formData, subSubCategoryId: e.target.value })}
+                  placeholder="Enter SubSubCategory ID"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-weight">Weight</Label>
+                <Input
+                  id="edit-weight"
+                  value={formData.weight}
+                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-dimensions">Dimensions</Label>
+                <Input
+                  id="edit-dimensions"
+                  value={formData.dimensions}
+                  onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-description">Description</Label>
@@ -509,6 +855,7 @@ export const Products: React.FC = () => {
                   id="edit-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -535,53 +882,25 @@ export const Products: React.FC = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-discountPrice">Discount Price</Label>
+                  <Label htmlFor="edit-discountPercentage">Discount %</Label>
                   <Input
-                    id="edit-discountPrice"
+                    id="edit-discountPercentage"
                     type="number"
                     step="0.01"
-                    value={formData.discountPrice}
-                    onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-stockQuantity">Stock Quantity</Label>
-                  <Input
-                    id="edit-stockQuantity"
-                    type="number"
-                    value={formData.stockQuantity}
-                    onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-sku">SKU</Label>
-                  <Input
-                    id="edit-sku"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    value={formData.discountPercentage}
+                    onChange={(e) => setFormData({ ...formData, discountPercentage: e.target.value })}
                   />
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-categoryId">Category</Label>
-                <Select 
-                  value={formData.categoryId} 
-                  onValueChange={(value) => setFormData({ ...formData, categoryId: value, subCategoryId: '', subSubCategoryId: '' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.data?.map((category: any) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-stockQuantity">Stock Quantity</Label>
+                <Input
+                  id="edit-stockQuantity"
+                  type="number"
+                  value={formData.stockQuantity}
+                  onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
+                  required
+                />
               </div>
             </div>
             <DialogFooter>
@@ -592,6 +911,59 @@ export const Products: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={isImageUploadOpen} onOpenChange={setIsImageUploadOpen}>
+        <DialogContent>
+          <form onSubmit={handleImageSubmit}>
+            <DialogHeader>
+              <DialogTitle>Upload Product Images</DialogTitle>
+              <DialogDescription>
+                Upload images for {selectedProduct?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="images">Select Images</Label>
+                <Input
+                  id="images"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => setSelectedImages(Array.from(e.target.files || []))}
+                />
+                {selectedImages.length > 0 && (
+                  <div className="text-sm text-gray-600">
+                    {selectedImages.length} image(s) selected
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                disabled={uploadImagesMutation.isPending || selectedImages.length === 0}
+              >
+                {uploadImagesMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Images
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+export default Products;
+
+

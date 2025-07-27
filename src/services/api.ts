@@ -77,11 +77,15 @@ class ApiService extends BaseApiService {
 
   // Product Management
   getProducts = this.productService.getProducts.bind(this.productService);
+  getProductsBySubSubCategoryId = this.productService.getProductsBySubSubCategoryId.bind(this.productService);
+  getProductsByCategoryId = this.productService.getProductsByCategoryId.bind(this.productService);
+  getProductById = this.productService.getProductById.bind(this.productService);
   createProduct = this.productService.createProduct.bind(this.productService);
   updateProduct = this.productService.updateProduct.bind(this.productService);
-  deleteProduct = this.productService.deleteProduct.bind(this.productService);
+  uploadProductImages = this.productService.uploadProductImages.bind(this.productService);
   softDeleteProduct = this.productService.softDeleteProduct.bind(this.productService);
   hardDeleteProduct = this.productService.hardDeleteProduct.bind(this.productService);
+  unDeleteProduct = this.productService.unDeleteProduct.bind(this.productService);
 
   // Order Management
   getOrders = this.orderService.getOrders.bind(this.orderService);
