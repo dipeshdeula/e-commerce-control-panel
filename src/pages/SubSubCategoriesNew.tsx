@@ -48,16 +48,17 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-export const SubCategories: React.FC = () => {
+// SubSubCategories component with full pagination and CRUD functionality
+export const SubSubCategories: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedSubCategory, setSelectedSubCategory] = useState<any>(null);
+  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
-    categoryId: '',
+    subCategoryId: '',
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,41 +68,41 @@ export const SubCategories: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: subCategories, isLoading } = useQuery({
-    queryKey: ['subcategories', currentPage, pageSize],
-    queryFn: () => apiService.getSubCategories({ page: currentPage, pageSize: pageSize }),
+  const { data: subSubCategories, isLoading } = useQuery({
+    queryKey: ['subsubcategories', currentPage, pageSize],
+    queryFn: () => apiService.getSubSubCategories({ page: currentPage, pageSize: pageSize }),
   });
 
-  console.log("subCategories data:", subCategories);
+  console.log('SubSubCategories data:', subSubCategories);
 
-  const { data: categories } = useQuery({
-    queryKey: ['categories-all'],
-    queryFn: () => apiService.getCategories({ page: 1, pageSize: 100 }),
+  const { data: subCategories } = useQuery({
+    queryKey: ['subcategories-all'],
+    queryFn: () => apiService.getSubCategories({ page: 1, pageSize: 100 }),
   });
 
-  console.log("subcategories data", subCategories);
-  console.log("subcategories structure:", {
+  console.log('SubCategories data:', subCategories);
+  console.log('subcategories structure:', {
     fullResponse: subCategories,
     data: subCategories?.data,
     length: subCategories?.data?.length
   });
 
   const createMutation = useMutation({
-    mutationFn: ({ categoryId, name, slug, description, imageFile }: { 
-      categoryId: number; 
+    mutationFn: ({ subCategoryId, name, slug, description, imageFile }: { 
+      subCategoryId: number; 
       name: string; 
       slug: string; 
       description: string; 
       imageFile?: File 
-    }) => apiService.createSubCategory(categoryId, name, slug, description, imageFile),
+    }) => apiService.createSubSubCategory(subCategoryId, name, slug, description, imageFile),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['subsubcategories'] });
       setIsCreateOpen(false);
       resetForm();
-      toast({ title: 'SubCategory created successfully' });
+      toast({ title: 'SubSubCategory created successfully' });
     },
     onError: (error) => {
-      toast({ title: 'Error creating subcategory', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error creating subsubcategory', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -112,46 +113,46 @@ export const SubCategories: React.FC = () => {
       slug: string; 
       description: string; 
       imageFile?: File 
-    }) => apiService.updateSubCategory(id, name, slug, description, imageFile),
+    }) => apiService.updateSubSubCategory(id, name, slug, description, imageFile),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['subsubcategories'] });
       setIsEditOpen(false);
       resetForm();
-      toast({ title: 'SubCategory updated successfully' });
+      toast({ title: 'SubSubCategory updated successfully' });
     },
     onError: (error) => {
-      toast({ title: 'Error updating subcategory', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error updating subsubcategory', description: error.message, variant: 'destructive' });
     },
   });
 
   const softDeleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.softDeleteSubCategory(id),
+    mutationFn: (id: number) => apiService.softDeleteSubSubCategory(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
-      toast({ title: 'SubCategory soft deleted successfully' });
+      queryClient.invalidateQueries({ queryKey: ['subsubcategories'] });
+      toast({ title: 'SubSubCategory soft deleted successfully' });
     },
   });
 
   const hardDeleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.hardDeleteSubCategory(id),
+    mutationFn: (id: number) => apiService.hardDeleteSubSubCategory(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
-      toast({ title: 'SubCategory permanently deleted' });
+      queryClient.invalidateQueries({ queryKey: ['subsubcategories'] });
+      toast({ title: 'SubSubCategory permanently deleted' });
     },
   });
 
   const unDeleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.unDeleteSubCategory(id),
+    mutationFn: (id: number) => apiService.unDeleteSubSubCategory(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['subsubcategories'] });
       toast({ 
-        title: 'SubCategory restored successfully',
+        title: 'SubSubCategory restored successfully',
         className: 'bg-green-50 border-green-200 text-green-800'
       });
     },
     onError: (error) => {
       toast({ 
-        title: 'Error restoring subcategory', 
+        title: 'Error restoring subsubcategory', 
         description: error.message, 
         variant: 'destructive' 
       });
@@ -163,19 +164,19 @@ export const SubCategories: React.FC = () => {
       name: '',
       slug: '',
       description: '',
-      categoryId: '',
+      subCategoryId: '',
     });
     setSelectedFile(null);
-    setSelectedSubCategory(null);
+    setSelectedSubSubCategory(null);
   };
 
-  const handleEdit = (subCategory: any) => {
-    setSelectedSubCategory(subCategory);
+  const handleEdit = (subSubCategory: any) => {
+    setSelectedSubSubCategory(subSubCategory);
     setFormData({
-      name: subCategory.name,
-      slug: subCategory.slug,
-      description: subCategory.description,
-      categoryId: subCategory.categoryId?.toString() || '',
+      name: subSubCategory.name,
+      slug: subSubCategory.slug,
+      description: subSubCategory.description,
+      subCategoryId: subSubCategory.subCategoryId?.toString() || '',
     });
     setIsEditOpen(true);
   };
@@ -183,9 +184,9 @@ export const SubCategories: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (selectedSubCategory) {
+    if (selectedSubSubCategory) {
       updateMutation.mutate({
-        id: selectedSubCategory.id,
+        id: selectedSubSubCategory.id,
         name: formData.name,
         slug: formData.slug,
         description: formData.description,
@@ -193,7 +194,7 @@ export const SubCategories: React.FC = () => {
       });
     } else {
       createMutation.mutate({
-        categoryId: parseInt(formData.categoryId),
+        subCategoryId: parseInt(formData.subCategoryId),
         name: formData.name,
         slug: formData.slug,
         description: formData.description,
@@ -203,55 +204,55 @@ export const SubCategories: React.FC = () => {
   };
 
   // Handle different possible response structures
-  const getSubCategoriesArray = () => {
-    if (!subCategories) return [];
+  const getSubSubCategoriesArray = () => {
+    if (!subSubCategories) return [];
     
-    console.log("Debug - subCategories structure:", {
-      fullResponse: subCategories,
-      data: subCategories?.data,
-      dataData: subCategories?.data?.data,
-      isDataArray: Array.isArray(subCategories?.data),
-      isDataDataArray: Array.isArray(subCategories?.data?.data)
+    console.log("Debug - subSubCategories structure:", {
+      fullResponse: subSubCategories,
+      data: subSubCategories?.data,
+      dataData: subSubCategories?.data?.data,
+      isDataArray: Array.isArray(subSubCategories?.data),
+      isDataDataArray: Array.isArray(subSubCategories?.data?.data)
     });
     
     // Try different possible structures based on API responses
-    if (Array.isArray(subCategories.data)) {
-      console.log("Using subCategories.data");
-      return subCategories.data;
-    } else if (Array.isArray(subCategories.data?.data)) {
-      console.log("Using subCategories.data.data");
-      return subCategories.data.data;
-    } else if (Array.isArray(subCategories)) {
-      console.log("Using subCategories directly");
-      return subCategories;
+    if (Array.isArray(subSubCategories.data)) {
+      console.log("Using subSubCategories.data");
+      return subSubCategories.data;
+    } else if (Array.isArray(subSubCategories.data?.data)) {
+      console.log("Using subSubCategories.data.data");
+      return subSubCategories.data.data;
+    } else if (Array.isArray(subSubCategories)) {
+      console.log("Using subSubCategories directly");
+      return subSubCategories;
     }
     
-    console.warn("Unexpected subcategories structure, returning empty array:", subCategories);
+    console.warn("Unexpected subsubcategories structure, returning empty array:", subSubCategories);
     return [];
   };
 
-  const subCategoriesArray = getSubCategoriesArray();
-  const activeCount = subCategoriesArray.filter((sub: any) => !sub.isDeleted).length;
-  const deletedCount = subCategoriesArray.filter((sub: any) => sub.isDeleted).length;
+  const subSubCategoriesArray = getSubSubCategoriesArray();
+  const activeCount = subSubCategoriesArray.filter((sub: any) => !sub.isDeleted).length;
+  const deletedCount = subSubCategoriesArray.filter((sub: any) => sub.isDeleted).length;
 
-  const filteredSubCategories = subCategoriesArray.filter((subCategory: any) =>
-    subCategory.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSubSubCategories = subSubCategoriesArray.filter((subSubCategory: any) =>
+    subSubCategory.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Pagination logic
-  const totalItems = subCategories?.data?.totalCount || filteredSubCategories.length;
-  const totalPages = subCategories?.data?.totalCount 
+  const totalItems = subSubCategories?.data?.totalCount || filteredSubSubCategories.length;
+  const totalPages = subSubCategories?.data?.totalCount 
     ? Math.ceil(totalItems / pageSize)
-    : filteredSubCategories.length === pageSize 
+    : filteredSubSubCategories.length === pageSize 
       ? currentPage + 1 
       : currentPage;
   
-  const hasMorePages = filteredSubCategories.length === pageSize;
+  const hasMorePages = filteredSubSubCategories.length === pageSize;
 
   // Paginate the filtered results
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedSubCategories = filteredSubCategories.slice(startIndex, endIndex);
+  const paginatedSubSubCategories = filteredSubSubCategories.slice(startIndex, endIndex);
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -262,7 +263,7 @@ export const SubCategories: React.FC = () => {
     if (e.key === 'Enter') {
       const pageNumber = parseInt(goToPage);
       if (pageNumber && pageNumber > 0) {
-        if (subCategories?.data?.totalCount) {
+        if (subSubCategories?.data?.totalCount) {
           // We have total count, validate against total pages
           if (pageNumber <= totalPages) {
             setCurrentPage(pageNumber);
@@ -285,33 +286,33 @@ export const SubCategories: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">SubCategories</h1>
-          <p className="text-gray-600">Manage your product subcategories</p>
+          <h1 className="text-2xl font-semibold text-gray-900">SubSubCategories</h1>
+          <p className="text-gray-600">Manage your product sub-subcategories</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => resetForm()}>
               <Plus className="w-4 h-4 mr-2" />
-              Add SubCategory
+              Add SubSubCategory
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Create New SubCategory</DialogTitle>
-                <DialogDescription>Add a new subcategory to your inventory</DialogDescription>
+                <DialogTitle>Create New SubSubCategory</DialogTitle>
+                <DialogDescription>Add a new sub-subcategory to your inventory</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="categoryId">Parent Category</Label>
-                  <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
+                  <Label htmlFor="subCategoryId">Parent SubCategory</Label>
+                  <Select value={formData.subCategoryId} onValueChange={(value) => setFormData({ ...formData, subCategoryId: value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder="Select a subcategory" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories?.data?.data?.map((category: any) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
+                      {subCategories?.data?.data?.map((subCategory: any) => (
+                        <SelectItem key={subCategory.id} value={subCategory.id.toString()}>
+                          {subCategory.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -355,7 +356,7 @@ export const SubCategories: React.FC = () => {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create SubCategory'}
+                  {createMutation.isPending ? 'Creating...' : 'Create SubSubCategory'}
                 </Button>
               </DialogFooter>
             </form>
@@ -365,13 +366,13 @@ export const SubCategories: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>SubCategory List</CardTitle>
+          <CardTitle>SubSubCategory List</CardTitle>
           <CardDescription>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Search className="w-4 h-4" />
                 <Input
-                  placeholder="Search subcategories..."
+                  placeholder="Search sub-subcategories..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="max-w-sm"
@@ -385,7 +386,7 @@ export const SubCategories: React.FC = () => {
                   {deletedCount} Deleted
                 </Badge>
                 <Badge variant="outline">
-                  {subCategoriesArray.length} Total
+                  {subSubCategoriesArray.length} Total
                 </Badge>
               </div>
             </div>
@@ -398,20 +399,20 @@ export const SubCategories: React.FC = () => {
                 <TableHead>Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>Parent Category</TableHead>
+                <TableHead>Parent SubCategory</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedSubCategories.map((subCategory: any) => (
-                <TableRow key={subCategory.id} className={subCategory.isDeleted ? 'opacity-60 bg-red-50' : ''}>
+              {paginatedSubSubCategories.map((subSubCategory: any) => (
+                <TableRow key={subSubCategory.id} className={subSubCategory.isDeleted ? 'opacity-60 bg-red-50' : ''}>
                   <TableCell>
-                    {subCategory.imageUrl ? (
+                    {subSubCategory.imageUrl ? (
                       <img
-                        src={subCategory.imageUrl.startsWith('http') ? subCategory.imageUrl : `${BASE_URL}/${subCategory.imageUrl}`}
-                        alt={subCategory.name}
+                        src={subSubCategory.imageUrl.startsWith('http') ? subSubCategory.imageUrl : `${BASE_URL}/${subSubCategory.imageUrl}`}
+                        alt={subSubCategory.name}
                         className="w-12 h-12 rounded object-cover"
                       />
                     ) : (
@@ -422,24 +423,24 @@ export const SubCategories: React.FC = () => {
                   </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-2">
-                      <span>{subCategory.name}</span>
-                      {subCategory.isDeleted && (
+                      <span>{subSubCategory.name}</span>
+                      {subSubCategory.isDeleted && (
                         <Badge variant="secondary" className="bg-red-100 text-red-700 text-xs">
                           Deleted
                         </Badge>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{subCategory.slug}</TableCell>
+                  <TableCell>{subSubCategory.slug}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {categories?.data?.data?.find((cat: any) => cat.id === subCategory.categoryId)?.name || 'N/A'}
+                      {subCategories?.data?.data?.find((sub: any) => sub.id === subSubCategory.subCategoryId)?.name || 'N/A'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate">{subCategory.description}</TableCell>
+                  <TableCell className="max-w-xs truncate">{subSubCategory.description}</TableCell>
                   <TableCell>
-                    <Badge variant={subCategory.isDeleted ? 'destructive' : 'default'}>
-                      {subCategory.isDeleted ? 'Deleted' : 'Active'}
+                    <Badge variant={subSubCategory.isDeleted ? 'destructive' : 'default'}>
+                      {subSubCategory.isDeleted ? 'Deleted' : 'Active'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -452,7 +453,7 @@ export const SubCategories: React.FC = () => {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>View SubCategory Details</p>
+                            <p>View SubSubCategory Details</p>
                           </TooltipContent>
                         </Tooltip>
                         
@@ -462,25 +463,25 @@ export const SubCategories: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                              onClick={() => handleEdit(subCategory)}
-                              disabled={subCategory.isDeleted}
+                              onClick={() => handleEdit(subSubCategory)}
+                              disabled={subSubCategory.isDeleted}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{subCategory.isDeleted ? 'Cannot edit deleted item' : 'Edit SubCategory'}</p>
+                            <p>{subSubCategory.isDeleted ? 'Cannot edit deleted item' : 'Edit SubSubCategory'}</p>
                           </TooltipContent>
                         </Tooltip>
                         
-                        {!subCategory.isDeleted ? (
+                        {!subSubCategory.isDeleted ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600"
-                                onClick={() => softDeleteMutation.mutate(subCategory.id)}
+                                onClick={() => softDeleteMutation.mutate(subSubCategory.id)}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -496,13 +497,13 @@ export const SubCategories: React.FC = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                                onClick={() => unDeleteMutation.mutate(subCategory.id)}
+                                onClick={() => unDeleteMutation.mutate(subSubCategory.id)}
                               >
                                 <RotateCcw className="w-4 h-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Restore SubCategory</p>
+                              <p>Restore SubSubCategory</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -513,7 +514,7 @@ export const SubCategories: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                              onClick={() => hardDeleteMutation.mutate(subCategory.id)}
+                              onClick={() => hardDeleteMutation.mutate(subSubCategory.id)}
                             >
                               <AlertTriangle className="w-4 h-4" />
                             </Button>
@@ -534,14 +535,14 @@ export const SubCategories: React.FC = () => {
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-500">
-                {subCategories?.data?.totalCount ? (
+                {subSubCategories?.data?.totalCount ? (
                   <>
                     Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to{' '}
-                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} subcategories
+                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} sub-subcategories
                   </>
                 ) : (
                   <>
-                    Showing {paginatedSubCategories.length} subcategories on page {currentPage}
+                    Showing {paginatedSubSubCategories.length} sub-subcategories on page {currentPage}
                     {hasMorePages ? ' (more pages available)' : ''}
                   </>
                 )}
@@ -553,11 +554,11 @@ export const SubCategories: React.FC = () => {
                     id="goToPage"
                     type="number"
                     min="1"
-                    max={subCategories?.data?.totalCount ? totalPages : undefined}
+                    max={subSubCategories?.data?.totalCount ? totalPages : undefined}
                     value={goToPage}
                     onChange={(e) => setGoToPage(e.target.value)}
                     onKeyDown={handleGoToPage}
-                    placeholder={subCategories?.data?.totalCount ? `1-${totalPages}` : 'Enter page'}
+                    placeholder={subSubCategories?.data?.totalCount ? `1-${totalPages}` : 'Enter page'}
                     className="w-20 h-8 text-sm"
                   />
                 </div>
@@ -577,7 +578,7 @@ export const SubCategories: React.FC = () => {
                 </PaginationItem>
                 
                 {/* Show page numbers - only if we have total count */}
-                {subCategories?.data?.totalCount ? (
+                {subSubCategories?.data?.totalCount ? (
                   (() => {
                     const pages = [];
                     const maxVisiblePages = 5;
@@ -681,7 +682,7 @@ export const SubCategories: React.FC = () => {
                     href="#" 
                     onClick={(e) => {
                       e.preventDefault();
-                      if (subCategories?.data?.totalCount) {
+                      if (subSubCategories?.data?.totalCount) {
                         // We have total count, check against total pages
                         if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
                       } else {
@@ -690,7 +691,7 @@ export const SubCategories: React.FC = () => {
                       }
                     }}
                     className={
-                      subCategories?.data?.totalCount 
+                      subSubCategories?.data?.totalCount 
                         ? (currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
                         : (!hasMorePages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
                     }
@@ -707,20 +708,20 @@ export const SubCategories: React.FC = () => {
         <DialogContent>
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>Edit SubCategory</DialogTitle>
-              <DialogDescription>Update subcategory information</DialogDescription>
+              <DialogTitle>Edit SubSubCategory</DialogTitle>
+              <DialogDescription>Update sub-subcategory information</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-categoryId">Parent Category</Label>
-                <Select value={formData.categoryId} onValueChange={(value) => setFormData({ ...formData, categoryId: value })}>
+                <Label htmlFor="edit-subCategoryId">Parent SubCategory</Label>
+                <Select value={formData.subCategoryId} onValueChange={(value) => setFormData({ ...formData, subCategoryId: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder="Select a subcategory" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories?.data?.data?.map((category: any) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
+                    {subCategories?.data?.data?.map((subCategory: any) => (
+                      <SelectItem key={subCategory.id} value={subCategory.id.toString()}>
+                        {subCategory.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -764,7 +765,7 @@ export const SubCategories: React.FC = () => {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Updating...' : 'Update SubCategory'}
+                {updateMutation.isPending ? 'Updating...' : 'Update SubSubCategory'}
               </Button>
             </DialogFooter>
           </form>

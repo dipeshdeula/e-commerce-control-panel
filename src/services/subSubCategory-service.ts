@@ -4,11 +4,16 @@ import { SubSubCategoryDTO } from '@/types/api';
 export class SubSubCategoryService extends BaseApiService 
 {
     // SubSubCategory Management
-  async getSubSubCategories(page?: number, pageSize?: number) {
-    let url = `${this.BASE_URL}/SubSubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
+  async getSubSubCategories(params: {page?: number, pageSize?: number} = {}) {
+    let url = `${this.BASE_URL}/subSubCategory/getAllSubSubCategory`;
+    const {page=1,pageSize=10} = params;
+
+    const queryParams = new URLSearchParams();
+    queryParams.append('PageNumber', page.toString());
+    queryParams.append('PageSize', pageSize.toString());
+
+    url += `?${queryParams.toString()}`;
+    
     const response = await fetch(url, {
       headers: this.getAuthHeaders()
     });
@@ -19,8 +24,22 @@ export class SubSubCategoryService extends BaseApiService
     return result;
   }
 
-  async createSubSubCategory(formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory`, {
+  async createSubSubCategory(subCategoryId:number, name:string, slug:string, description:string, imageFile?:File) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('SubCategoryId', subCategoryId.toString());
+    queryParams.append('Name', name);
+    queryParams.append('Slug', slug);
+    queryParams.append('Description', description);
+
+    const url = `${this.BASE_URL}/subSubCategory/create-subSubCategory?${queryParams.toString()}`;
+
+    const formData = new FormData();
+    if(imageFile)
+    {
+        formData.append('File', imageFile);
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: this.getFormHeaders(),
       body: formData
@@ -32,8 +51,20 @@ export class SubSubCategoryService extends BaseApiService
     return result;
   }
 
-  async updateSubSubCategory(id: number, formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
+  async updateSubSubCategory(id: number, name: string,slug:string,descripton:string, imageFile?:File) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('SubSubCategoryId', id.toString());
+    queryParams.append('Name', name);
+    queryParams.append('Slug', slug);
+    queryParams.append('Description', descripton);
+    const url = `${this.BASE_URL}/subSubCategory/updateSubSubCategory?${queryParams.toString()}`;
+
+    const formData = new FormData();
+    if (imageFile) {
+      formData.append('File', imageFile);
+    }
+
+    const response = await fetch(url, {
       method: 'PUT',
       headers: this.getFormHeaders(),
       body: formData
@@ -46,19 +77,20 @@ export class SubSubCategoryService extends BaseApiService
   }
 
   async deleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    const result = await this.handleResponse<void>(response);
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to delete sub-subcategory');
-    }
-    return result;
-  }
+        const response = await fetch(`${this.BASE_URL}/subSubCategory/${id}`, {
+          method: 'DELETE',
+          headers: this.getAuthHeaders()
+        });
+        const result = await this.handleResponse<void>(response);
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to delete subSubcategory');
+        }
+        return result;
+      }
+ 
 
   async softDeleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/soft-delete/${id}`, {
+    const response = await fetch(`${this.BASE_URL}/subSubCategory/softDeleteSubSubCategory?subSubCategoryId=${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
@@ -70,7 +102,7 @@ export class SubSubCategoryService extends BaseApiService
   }
 
   async hardDeleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/hard-delete/${id}`, {
+    const response = await fetch(`${this.BASE_URL}/subSubCategory/hardDeleteSubSubCategory?subSubCategoryId=${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
@@ -82,8 +114,8 @@ export class SubSubCategoryService extends BaseApiService
   }
 
   async unDeleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/restore/${id}`, {
-      method: 'PUT',
+    const response = await fetch(`${this.BASE_URL}/subSubCategory/unDeleteSubSubCategory?subSubCategoryId=${id}`, {
+      method: 'DELETE',
       headers: this.getAuthHeaders()
     });
     const result = await this.handleResponse<void>(response);

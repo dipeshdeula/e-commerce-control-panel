@@ -11,7 +11,7 @@ import Login from "@/pages/Login";
 import { Products } from "@/pages/Products";
 import { Categories } from "@/pages/Categories";
 import { SubCategories } from "@/pages/SubCategories";
-import { SubSubCategories } from "@/pages/SubSubCategories";
+import { SubSubCategories } from "@/pages/SubSubCategoriesNew";
 import { Orders } from "@/pages/Orders";
 import { Users } from "@/pages/Users";
 import { Stores } from "@/pages/Stores";
@@ -125,11 +125,13 @@ const AppContent = () => {
         element={
           <ProtectedRoute>
             <Layout>
-              <SubSubCategories />
+               <SubSubCategories /> 
             </Layout>
           </ProtectedRoute>
         }
-      />
+      /> 
+     
+
       <Route
         path="/products"
         element={
