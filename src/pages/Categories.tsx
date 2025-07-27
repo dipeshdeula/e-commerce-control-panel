@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService, BASE_URL } from '@/services/api';
 import { Button } from '@/components/ui/button';
@@ -53,11 +53,19 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export const Categories: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
+  const [goToPage, setGoToPage] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -71,9 +79,36 @@ export const Categories: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Reset to first page when search term or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, pageSize]);
+
   const { data: categories, isLoading, refetch } = useQuery({
-    queryKey: ['categories', currentPage, pageSize],
-    queryFn: () => apiService.getCategories(currentPage, pageSize),
+    queryKey: ['categories', currentPage, pageSize, debouncedSearchTerm],
+    queryFn: () => apiService.getCategories({ 
+      page: currentPage, 
+      pageSize: pageSize, 
+      search: debouncedSearchTerm || undefined 
+    }),
+  });
+
+  console.log("category data", categories);
+  console.log("categories structure:", {
+    fullResponse: categories,
+    data: categories?.data,
+    dataData: categories?.data?.data,
+    totalCount: categories?.data?.totalCount,
+    length: categories?.data?.data?.length
   });
 
   const createMutation = useMutation({
@@ -194,10 +229,61 @@ export const Categories: React.FC = () => {
     }
   };
 
-  const filteredCategories = categories?.data?.filter((category: any) =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const categories_data = categories?.data?.data || [];
+  const totalItems = categories?.data?.totalCount || categories_data.length;
+  
+  // Calculate total pages - if we don't have totalCount, estimate based on current data
+  const totalPages = categories?.data?.totalCount 
+    ? Math.ceil(totalItems / pageSize)
+    : categories_data.length === pageSize 
+      ? currentPage + 1 // Assume there might be more pages
+      : currentPage; // This is likely the last page
+
+  // For display purposes when we don't have exact total
+  const displayTotalItems = categories?.data?.totalCount || `${categories_data.length}+`;
+  const hasMorePages = categories_data.length === pageSize;
+
+  // Handle search with debounce
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+  };
+
+  // Handle go to page
+  const handleGoToPage = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const pageNumber = parseInt(goToPage);
+      if (pageNumber >= 1) {
+        if (categories?.data?.totalCount) {
+          // We have total count, validate against total pages
+          if (pageNumber <= totalPages) {
+            setCurrentPage(pageNumber);
+            setGoToPage('');
+          } else {
+            toast({
+              title: 'Invalid Page',
+              description: `Please enter a page number between 1 and ${totalPages}`,
+              variant: 'destructive'
+            });
+          }
+        } else {
+          // No total count, allow navigation
+          setCurrentPage(pageNumber);
+          setGoToPage('');
+        }
+      } else {
+        toast({
+          title: 'Invalid Page',
+          description: 'Please enter a valid page number (1 or greater)',
+          variant: 'destructive'
+        });
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -314,22 +400,37 @@ export const Categories: React.FC = () => {
             <FolderOpen className="w-5 h-5 text-blue-500" />
             Category Management
           </CardTitle>
-          <CardDescription>
+          <div className="mt-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Search className="w-4 h-4 text-gray-400" />
                 <Input
                   placeholder="Search categories..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearch(e.target.value)}
                   className="max-w-sm border-gray-200 focus:border-blue-400"
                 />
               </div>
-              <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                {filteredCategories.length} categories found
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="pageSize" className="text-sm font-medium">Show:</Label>
+                <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                  {categories?.data?.totalCount ? `${totalItems} total categories` : `${categories_data.length} categories on this page`}
+                </Badge>
+              </div>
             </div>
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-gray-200 overflow-hidden">
@@ -344,7 +445,7 @@ export const Categories: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCategories.map((category: any) => (
+                {categories_data.map((category: any) => (
                   <TableRow key={category.id} className="hover:bg-gray-50 transition-colors">
                     <TableCell>
                       <div className="flex items-center space-x-3">
@@ -386,47 +487,88 @@ export const Categories: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-center space-x-1">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600"
-                          onClick={() => softDeleteMutation.mutate(category.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                          onClick={() => unDeleteMutation.mutate(category.id)}
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                          onClick={() => hardDeleteMutation.mutate(category.id)}
-                        >
-                          <AlertTriangle className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <TooltipProvider>
+                        <div className="flex justify-center space-x-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-50 hover:text-gray-600">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View Category Details</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                                onClick={() => handleEdit(category)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit Category</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600"
+                                onClick={() => softDeleteMutation.mutate(category.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move to Trash (Soft Delete)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                onClick={() => unDeleteMutation.mutate(category.id)}
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Restore Category</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                                onClick={() => hardDeleteMutation.mutate(category.id)}
+                              >
+                                <AlertTriangle className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Permanently Delete</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 ))}
-                {filteredCategories.length === 0 && (
+                {categories_data.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8">
                       <div className="flex flex-col items-center space-y-2">
@@ -449,35 +591,168 @@ export const Categories: React.FC = () => {
           
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-gray-500">
-              Showing {Math.min((currentPage - 1) * pageSize + 1, filteredCategories.length)} to{' '}
-              {Math.min(currentPage * pageSize, filteredCategories.length)} of {filteredCategories.length} categories
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500">
+                {categories?.data?.totalCount ? (
+                  <>
+                    Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to{' '}
+                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} categories
+                  </>
+                ) : (
+                  <>
+                    Showing {categories_data.length} categories on page {currentPage}
+                    {hasMorePages ? ' (more pages available)' : ''}
+                  </>
+                )}
+              </div>
+              {(totalPages > 1 || hasMorePages) && (
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="goToPage" className="text-sm">Go to page:</Label>
+                  <Input
+                    id="goToPage"
+                    type="number"
+                    min="1"
+                    max={categories?.data?.totalCount ? totalPages : undefined}
+                    value={goToPage}
+                    onChange={(e) => setGoToPage(e.target.value)}
+                    onKeyDown={handleGoToPage}
+                    placeholder={categories?.data?.totalCount ? `1-${totalPages}` : 'Enter page'}
+                    className="w-20 h-8 text-sm"
+                  />
+                </div>
+              )}
             </div>
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious 
                     href="#" 
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(prev => prev - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>
-                {[...Array(Math.ceil(filteredCategories.length / pageSize))].map((_, i) => (
-                  <PaginationItem key={i + 1}>
+                
+                {/* Show page numbers - only if we have total count */}
+                {categories?.data?.totalCount ? (
+                  (() => {
+                    const pages = [];
+                    const maxVisiblePages = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                    
+                    // Adjust start page if we're near the end
+                    if (endPage - startPage + 1 < maxVisiblePages) {
+                      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                    }
+
+                    // First page
+                    if (startPage > 1) {
+                      pages.push(
+                        <PaginationItem key={1}>
+                          <PaginationLink 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(1);
+                            }}
+                            isActive={currentPage === 1}
+                            className="cursor-pointer"
+                          >
+                            1
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                      if (startPage > 2) {
+                        pages.push(
+                          <PaginationItem key="start-ellipsis">
+                            <span className="px-3 py-2">...</span>
+                          </PaginationItem>
+                        );
+                      }
+                    }
+
+                    // Middle pages
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <PaginationItem key={i}>
+                          <PaginationLink 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(i);
+                            }}
+                            isActive={currentPage === i}
+                            className="cursor-pointer"
+                          >
+                            {i}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    }
+
+                    // Last page
+                    if (endPage < totalPages) {
+                      if (endPage < totalPages - 1) {
+                        pages.push(
+                          <PaginationItem key="end-ellipsis">
+                            <span className="px-3 py-2">...</span>
+                          </PaginationItem>
+                        );
+                      }
+                      pages.push(
+                        <PaginationItem key={totalPages}>
+                          <PaginationLink 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(totalPages);
+                            }}
+                            isActive={currentPage === totalPages}
+                            className="cursor-pointer"
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    }
+
+                    return pages;
+                  })()
+                ) : (
+                  /* Simple pagination when no total count */
+                  <PaginationItem>
                     <PaginationLink 
                       href="#" 
-                      onClick={() => setCurrentPage(i + 1)}
-                      isActive={currentPage === i + 1}
+                      onClick={(e) => e.preventDefault()}
+                      isActive={true}
+                      className="cursor-default"
                     >
-                      {i + 1}
+                      {currentPage}
                     </PaginationLink>
                   </PaginationItem>
-                ))}
+                )}
+
                 <PaginationItem>
                   <PaginationNext 
                     href="#" 
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className={currentPage * pageSize >= filteredCategories.length ? 'pointer-events-none opacity-50' : ''}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (categories?.data?.totalCount) {
+                        // We have total count, check against total pages
+                        if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
+                      } else {
+                        // No total count, allow next if current page has full data
+                        if (hasMorePages) setCurrentPage(prev => prev + 1);
+                      }
+                    }}
+                    className={
+                      categories?.data?.totalCount 
+                        ? (currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
+                        : (!hasMorePages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
+                    }
                   />
                 </PaginationItem>
               </PaginationContent>

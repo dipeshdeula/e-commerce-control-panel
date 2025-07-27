@@ -11,12 +11,16 @@ import { StoreService } from './store-service';
 import { CompanyService } from './company-service';
 import { BillingService } from './billing-service';
 import { TransactionService } from './transaction-service';
+import { SubCategoryService } from './subCategory-service';
+import { SubSubCategoryService } from './subSubCategory-service';
 
 class ApiService extends BaseApiService {
   private authService = new AuthService();
   private dashboardService = new DashboardService();
   private userService = new UserService();
   private categoryService = new CategoryService();
+  private subCategoryService = new SubCategoryService(); 
+  private SubSubCategoryService = new SubSubCategoryService();
   private productService = new ProductService();
   private orderService = new OrderService();
   private paymentService = new PaymentService();
@@ -54,22 +58,22 @@ class ApiService extends BaseApiService {
   unDeleteCategory = this.categoryService.unDeleteCategory.bind(this.categoryService);
 
   // SubCategory Management
-  getSubCategories = this.categoryService.getSubCategories.bind(this.categoryService);
-  createSubCategory = this.categoryService.createSubCategory.bind(this.categoryService);
-  updateSubCategory = this.categoryService.updateSubCategory.bind(this.categoryService);
-  deleteSubCategory = this.categoryService.deleteSubCategory.bind(this.categoryService);
-  softDeleteSubCategory = this.categoryService.softDeleteSubCategory.bind(this.categoryService);
-  hardDeleteSubCategory = this.categoryService.hardDeleteSubCategory.bind(this.categoryService);
-  unDeleteSubCategory = this.categoryService.unDeleteSubCategory.bind(this.categoryService);
+  getSubCategories = this.subCategoryService.getSubCategories.bind(this.subCategoryService);
+  createSubCategory = this.subCategoryService.createSubCategory.bind(this.subCategoryService);
+  updateSubCategory = this.subCategoryService.updateSubCategory.bind(this.subCategoryService);
+  deleteSubCategory = this.subCategoryService.deleteSubCategory.bind(this.subCategoryService);
+  softDeleteSubCategory = this.subCategoryService.softDeleteSubCategory.bind(this.subCategoryService);
+  hardDeleteSubCategory = this.subCategoryService.hardDeleteSubCategory.bind(this.subCategoryService);
+  unDeleteSubCategory = this.subCategoryService.unDeleteSubCategory.bind(this.subCategoryService);
 
   // SubSubCategory Management
-  getSubSubCategories = this.categoryService.getSubSubCategories.bind(this.categoryService);
-  createSubSubCategory = this.categoryService.createSubSubCategory.bind(this.categoryService);
-  updateSubSubCategory = this.categoryService.updateSubSubCategory.bind(this.categoryService);
-  deleteSubSubCategory = this.categoryService.deleteSubSubCategory.bind(this.categoryService);
-  softDeleteSubSubCategory = this.categoryService.softDeleteSubSubCategory.bind(this.categoryService);
-  hardDeleteSubSubCategory = this.categoryService.hardDeleteSubSubCategory.bind(this.categoryService);
-  unDeleteSubSubCategory = this.categoryService.unDeleteSubSubCategory.bind(this.categoryService);
+  getSubSubCategories = this.SubSubCategoryService.getSubSubCategories.bind(this.SubSubCategoryService);
+  createSubSubCategory = this.SubSubCategoryService.createSubSubCategory.bind(this.SubSubCategoryService);
+  updateSubSubCategory = this.SubSubCategoryService.updateSubSubCategory.bind(this.SubSubCategoryService);
+  deleteSubSubCategory = this.SubSubCategoryService.deleteSubSubCategory.bind(this.SubSubCategoryService);
+  softDeleteSubSubCategory = this.SubSubCategoryService.softDeleteSubSubCategory.bind(this.SubSubCategoryService);
+  hardDeleteSubSubCategory = this.SubSubCategoryService.hardDeleteSubSubCategory.bind(this.SubSubCategoryService);
+  unDeleteSubSubCategory = this.SubSubCategoryService.unDeleteSubSubCategory.bind(this.SubSubCategoryService);
 
   // Product Management
   getProducts = this.productService.getProducts.bind(this.productService);

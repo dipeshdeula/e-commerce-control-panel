@@ -1,36 +1,56 @@
 
 import { BaseApiService } from '@/shared/services/base-api';
-import { CategoryDTO, SubCategoryDTO, SubSubCategoryDTO } from '@/types/api';
+import { CategoryDTO } from '@/types/api';
 
 export class CategoryService extends BaseApiService {
   // Category Management
-  async getCategories(page?: number, pageSize?: number) {
-    let url = `${this.BASE_URL}/Category`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
+  async getCategories(params: { page?: number; pageSize?: number; search?: string } = {}) {
+    let url = `${this.BASE_URL}/category/getAllCategory`;
+    const { page = 1, pageSize = 10, search } = params;
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('PageNumber', page.toString());
+    queryParams.append('PageSize', pageSize.toString());
+    if (search) {
+      queryParams.append('search', search);
     }
+    
+    url += `?${queryParams.toString()}`;
+    
     const response = await fetch(url, {
       headers: this.getAuthHeaders()
     });
-    return this.handleResponse<CategoryDTO[]>(response);
+    const result = await this.handleResponse<any>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to fetch categories');
+    }
+    return result;
   }
 
   async createCategory(formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/Category`, {
+    const response = await fetch(`${this.BASE_URL}/category/create`, {
       method: 'POST',
       headers: this.getFormHeaders(),
       body: formData
     });
-    return this.handleResponse<CategoryDTO>(response);
+    const result = await this.handleResponse<CategoryDTO>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to create category');
+    }
+    return result;
   }
 
   async updateCategory(id: number, formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/Category/${id}`, {
+    const response = await fetch(`${this.BASE_URL}/category/updateCategory?CategoryId=${id}`, {
       method: 'PUT',
       headers: this.getFormHeaders(),
       body: formData
     });
-    return this.handleResponse<CategoryDTO>(response);
+    const result = await this.handleResponse<CategoryDTO>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update category');
+    }
+    return result;
   }
 
   async deleteCategory(id: number) {
@@ -38,154 +58,47 @@ export class CategoryService extends BaseApiService {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
-    return this.handleResponse<void>(response);
+    const result = await this.handleResponse<void>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to delete category');
+    }
+    return result;
   }
 
   async softDeleteCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/Category/soft-delete/${id}`, {
+    const response = await fetch(`${this.BASE_URL}/category/softDeleteCategory?categoryId=${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
-    return this.handleResponse<void>(response);
+    const result = await this.handleResponse<void>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to soft delete category');
+    }
+    return result;
   }
 
   async hardDeleteCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/Category/hard-delete/${id}`, {
+    const response = await fetch(`${this.BASE_URL}/category/hardDeleteCategory?categoryId=${id}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
-    return this.handleResponse<void>(response);
+    const result = await this.handleResponse<void>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to permanently delete category');
+    }
+    return result;
   }
 
   async unDeleteCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/Category/restore/${id}`, {
-      method: 'PUT',
+    const response = await fetch(`${this.BASE_URL}/category/unDeleteCategory?categoryId=${id}`, {
+      method: 'DELETE',
       headers: this.getAuthHeaders()
     });
-    return this.handleResponse<void>(response);
-  }
-
-  // SubCategory Management
-  async getSubCategories(page?: number, pageSize?: number) {
-    let url = `${this.BASE_URL}/SubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
+    const result = await this.handleResponse<void>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to restore category');
     }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<SubCategoryDTO[]>(response);
+    return result;
   }
-
-  async createSubCategory(formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/SubCategory`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubCategoryDTO>(response);
-  }
-
-  async updateSubCategory(id: number, formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/${id}`, {
-      method: 'PUT',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubCategoryDTO>(response);
-  }
-
-  async deleteSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async softDeleteSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async unDeleteSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubCategory/restore/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  // SubSubCategory Management
-  async getSubSubCategories(page?: number, pageSize?: number) {
-    let url = `${this.BASE_URL}/SubSubCategory`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
-    }
-    const response = await fetch(url, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<SubSubCategoryDTO[]>(response);
-  }
-
-  async createSubSubCategory(formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory`, {
-      method: 'POST',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubSubCategoryDTO>(response);
-  }
-
-  async updateSubSubCategory(id: number, formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
-      method: 'PUT',
-      headers: this.getFormHeaders(),
-      body: formData
-    });
-    return this.handleResponse<SubSubCategoryDTO>(response);
-  }
-
-  async deleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async softDeleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/soft-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async hardDeleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/hard-delete/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async unDeleteSubSubCategory(id: number) {
-    const response = await fetch(`${this.BASE_URL}/SubSubCategory/restore/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
+    
 }

@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService } from '@/services/api';
+import { apiService, BASE_URL } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +32,13 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Search, RotateCcw, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, RotateCcw, Image as ImageIcon, AlertTriangle, Eye } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export const SubCategories: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,16 +60,31 @@ export const SubCategories: React.FC = () => {
 
   const { data: subCategories, isLoading } = useQuery({
     queryKey: ['subcategories', currentPage, pageSize],
-    queryFn: () => apiService.getSubCategories(currentPage, pageSize),
+    queryFn: () => apiService.getSubCategories({ page: currentPage, pageSize: pageSize }),
   });
+
+  console.log("subCategories data:", subCategories);
 
   const { data: categories } = useQuery({
     queryKey: ['categories-all'],
-    queryFn: () => apiService.getCategories(1, 100),
+    queryFn: () => apiService.getCategories({ page: 1, pageSize: 100 }),
+  });
+
+  console.log("subcategories data", subCategories);
+  console.log("subcategories structure:", {
+    fullResponse: subCategories,
+    data: subCategories?.data,
+    length: subCategories?.data?.length
   });
 
   const createMutation = useMutation({
-    mutationFn: (formData: FormData) => apiService.createSubCategory(formData),
+    mutationFn: ({ categoryId, name, slug, description, imageFile }: { 
+      categoryId: number; 
+      name: string; 
+      slug: string; 
+      description: string; 
+      imageFile?: File 
+    }) => apiService.createSubCategory(categoryId, name, slug, description, imageFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       setIsCreateOpen(false);
@@ -77,8 +97,13 @@ export const SubCategories: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, formData }: { id: number; formData: FormData }) => 
-      apiService.updateSubCategory(id, formData),
+    mutationFn: ({ id, name, slug, description, imageFile }: { 
+      id: number; 
+      name: string; 
+      slug: string; 
+      description: string; 
+      imageFile?: File 
+    }) => apiService.updateSubCategory(id, name, slug, description, imageFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       setIsEditOpen(false);
@@ -110,7 +135,17 @@ export const SubCategories: React.FC = () => {
     mutationFn: (id: number) => apiService.unDeleteSubCategory(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
-      toast({ title: 'SubCategory restored successfully' });
+      toast({ 
+        title: 'SubCategory restored successfully',
+        className: 'bg-green-50 border-green-200 text-green-800'
+      });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Error restoring subcategory', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
     },
   });
 
@@ -138,26 +173,61 @@ export const SubCategories: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const submitFormData = new FormData();
-    submitFormData.append('Name', formData.name);
-    submitFormData.append('Slug', formData.slug);
-    submitFormData.append('Description', formData.description);
-    submitFormData.append('CategoryId', formData.categoryId);
     
-    if (selectedFile) {
-      submitFormData.append('File', selectedFile);
-    }
-
     if (selectedSubCategory) {
-      updateMutation.mutate({ id: selectedSubCategory.id, formData: submitFormData });
+      updateMutation.mutate({
+        id: selectedSubCategory.id,
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        imageFile: selectedFile || undefined
+      });
     } else {
-      createMutation.mutate(submitFormData);
+      createMutation.mutate({
+        categoryId: parseInt(formData.categoryId),
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        imageFile: selectedFile || undefined
+      });
     }
   };
 
-  const filteredSubCategories = subCategories?.data?.filter((subCategory: any) =>
-    subCategory.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  // Handle different possible response structures
+  const getSubCategoriesArray = () => {
+    if (!subCategories) return [];
+    
+    console.log("Debug - subCategories structure:", {
+      fullResponse: subCategories,
+      data: subCategories?.data,
+      dataData: subCategories?.data?.data,
+      isDataArray: Array.isArray(subCategories?.data),
+      isDataDataArray: Array.isArray(subCategories?.data?.data)
+    });
+    
+    // Try different possible structures based on API responses
+    if (Array.isArray(subCategories.data)) {
+      console.log("Using subCategories.data");
+      return subCategories.data;
+    } else if (Array.isArray(subCategories.data?.data)) {
+      console.log("Using subCategories.data.data");
+      return subCategories.data.data;
+    } else if (Array.isArray(subCategories)) {
+      console.log("Using subCategories directly");
+      return subCategories;
+    }
+    
+    console.warn("Unexpected subcategories structure, returning empty array:", subCategories);
+    return [];
+  };
+
+  const subCategoriesArray = getSubCategoriesArray();
+  const activeCount = subCategoriesArray.filter((sub: any) => !sub.isDeleted).length;
+  const deletedCount = subCategoriesArray.filter((sub: any) => sub.isDeleted).length;
+
+  const filteredSubCategories = subCategoriesArray.filter((subCategory: any) =>
+    subCategory.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
@@ -191,7 +261,7 @@ export const SubCategories: React.FC = () => {
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories?.data?.map((category: any) => (
+                      {categories?.data?.data?.map((category: any) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           {category.name}
                         </SelectItem>
@@ -249,14 +319,27 @@ export const SubCategories: React.FC = () => {
         <CardHeader>
           <CardTitle>SubCategory List</CardTitle>
           <CardDescription>
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4" />
-              <Input
-                placeholder="Search subcategories..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Search className="w-4 h-4" />
+                <Input
+                  placeholder="Search subcategories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="default" className="bg-green-100 text-green-700">
+                  {activeCount} Active
+                </Badge>
+                <Badge variant="secondary" className="bg-red-100 text-red-700">
+                  {deletedCount} Deleted
+                </Badge>
+                <Badge variant="outline">
+                  {subCategoriesArray.length} Total
+                </Badge>
+              </div>
             </div>
           </CardDescription>
         </CardHeader>
@@ -269,16 +352,17 @@ export const SubCategories: React.FC = () => {
                 <TableHead>Slug</TableHead>
                 <TableHead>Parent Category</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredSubCategories.map((subCategory: any) => (
-                <TableRow key={subCategory.id}>
+                <TableRow key={subCategory.id} className={subCategory.isDeleted ? 'opacity-60 bg-red-50' : ''}>
                   <TableCell>
                     {subCategory.imageUrl ? (
                       <img
-                        src={`${apiService.BASE_URL}/${subCategory.imageUrl}`}
+                        src={subCategory.imageUrl.startsWith('http') ? subCategory.imageUrl : `${BASE_URL}/${subCategory.imageUrl}`}
                         alt={subCategory.name}
                         className="w-12 h-12 rounded object-cover"
                       />
@@ -288,38 +372,110 @@ export const SubCategories: React.FC = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{subCategory.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      <span>{subCategory.name}</span>
+                      {subCategory.isDeleted && (
+                        <Badge variant="secondary" className="bg-red-100 text-red-700 text-xs">
+                          Deleted
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{subCategory.slug}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {categories?.data?.find((cat: any) => cat.id === subCategory.categoryId)?.name || 'N/A'}
+                      {categories?.data?.data?.find((cat: any) => cat.id === subCategory.categoryId)?.name || 'N/A'}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-xs truncate">{subCategory.description}</TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(subCategory)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => softDeleteMutation.mutate(subCategory.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => unDeleteMutation.mutate(subCategory.id)}
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Badge variant={subCategory.isDeleted ? 'destructive' : 'default'}>
+                      {subCategory.isDeleted ? 'Deleted' : 'Active'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <div className="flex space-x-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-50">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View SubCategory Details</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                              onClick={() => handleEdit(subCategory)}
+                              disabled={subCategory.isDeleted}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{subCategory.isDeleted ? 'Cannot edit deleted item' : 'Edit SubCategory'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        
+                        {!subCategory.isDeleted ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600"
+                                onClick={() => softDeleteMutation.mutate(subCategory.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move to Trash (Soft Delete)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                onClick={() => unDeleteMutation.mutate(subCategory.id)}
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Restore SubCategory</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              onClick={() => hardDeleteMutation.mutate(subCategory.id)}
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Permanently Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}
@@ -344,7 +500,7 @@ export const SubCategories: React.FC = () => {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories?.data?.map((category: any) => (
+                    {categories?.data?.data?.map((category: any) => (
                       <SelectItem key={category.id} value={category.id.toString()}>
                         {category.name}
                       </SelectItem>
