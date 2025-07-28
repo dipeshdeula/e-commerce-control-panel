@@ -12,6 +12,7 @@ import { StoreService } from './store-service';
 import { CompanyService } from './company-service';
 import { BillingService } from './billing-service';
 import { TransactionService } from './transaction-service';
+import { NotificationService } from './notification-service';
 import { SubCategoryService } from './subCategory-service';
 import { SubSubCategoryService } from './subSubCategory-service';
 
@@ -30,6 +31,7 @@ class ApiService extends BaseApiService {
   private companyService = new CompanyService();
   private billingService = new BillingService();
   private transactionService = new TransactionService();
+  private notificationService = new NotificationService();
 
   // Auth methods
   login = this.authService.login.bind(this.authService);
@@ -91,7 +93,18 @@ class ApiService extends BaseApiService {
 
   // Order Management
   getOrders = this.orderService.getOrders.bind(this.orderService);
+  getAllOrders = this.orderService.getAllOrders.bind(this.orderService);
+  getOrderById = this.orderService.getOrderById.bind(this.orderService);
+  getOrdersByUserId = this.orderService.getOrdersByUserId.bind(this.orderService);
+  confirmOrderStatus = this.orderService.confirmOrderStatus.bind(this.orderService);
   updateOrderStatus = this.orderService.updateOrderStatus.bind(this.orderService);
+
+  // Notification Management
+  getAllNotifications = this.notificationService.getAllNotifications.bind(this.notificationService);
+  getNotificationsByUserId = this.notificationService.getNotificationsByUserId.bind(this.notificationService);
+  markAsRead = this.notificationService.markAsRead.bind(this.notificationService);
+  acknowledgeNotification = this.notificationService.acknowledgeNotification.bind(this.notificationService);
+  sendNotificationToUser = this.notificationService.sendNotificationToUser.bind(this.notificationService);
 
   // Payment Method Management
   createPaymentMethod = this.paymentMethodService.createPaymentMethod.bind(this.paymentMethodService);
