@@ -15,6 +15,7 @@ import { SubSubCategories } from "@/pages/SubSubCategoriesNew";
 import { Orders } from "@/pages/Orders";
 import { Users } from "@/pages/Users";
 import { Stores } from "@/pages/Stores";
+import { ProductStores } from "@/pages/ProductStores";
 import { Payments } from "@/pages/Payments";
 import { PaymentMethods } from "@/pages/PaymentMethods";
 import { PaymentRequests } from "@/pages/PaymentRequests";
@@ -158,6 +159,16 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <Stores />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/product-stores"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ProductStores />
             </Layout>
           </ProtectedRoute>
         }

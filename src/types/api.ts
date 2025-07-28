@@ -322,7 +322,7 @@ export interface StoreDTO {
   storeId: number;
   name: string;
   ownerName: string;
-  address: string;
+  address: string[];
   imageUrl: string;
   isActive: boolean;
 }

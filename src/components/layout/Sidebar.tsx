@@ -55,7 +55,14 @@ const navigation = [
     ]
   },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
-  { name: 'Stores', href: '/stores', icon: Store },
+  {
+    name: 'Store Management',
+    icon: Store,
+    children: [
+      { name: 'Stores', href: '/stores', icon: Store },
+      { name: 'Product Stores', href: '/product-stores', icon: Package },
+    ]
+  },
   {
     name: 'Payments',
     icon: CreditCard,
@@ -75,7 +82,7 @@ export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user, loading } = useAppSelector(state => state.auth);
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory', 'Payments']);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory', 'Payments', 'Store Management']);
 
   const toggleExpanded = (itemName: string) => {
     setExpandedItems(prev => 

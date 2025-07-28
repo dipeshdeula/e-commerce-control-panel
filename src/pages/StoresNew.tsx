@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService, BASE_URL } from '@/services/api';
+import { apiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -179,37 +179,29 @@ export const Stores: React.FC = () => {
   });
 
   const addAddressMutation = useMutation({
-    mutationFn: ({ storeId, addressData }: { storeId: number, addressData: typeof addressFormData }) => {
-      console.log('Adding address for store:', storeId, 'with data:', addressData); // Debug log
-      return apiService.addStoreAddress(storeId, addressData);
-    },
-    onSuccess: (data) => {
-      console.log('Address added successfully:', data); // Debug log
+    mutationFn: ({ storeId, addressData }: { storeId: number, addressData: typeof addressFormData }) =>
+      apiService.addStoreAddress(storeId, addressData),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
       setIsAddressOpen(false);
       resetAddressForm();
       toast({ title: 'Store address added successfully' });
     },
     onError: (error) => {
-      console.error('Error adding address:', error); // Debug log
       toast({ title: 'Error adding store address', description: error.message, variant: 'destructive' });
     }
   });
 
   const updateAddressMutation = useMutation({
-    mutationFn: ({ storeId, addressData }: { storeId: number, addressData: typeof addressFormData }) => {
-      console.log('Updating address for store:', storeId, 'with data:', addressData); // Debug log
-      return apiService.updateStoreAddress(storeId, addressData);
-    },
-    onSuccess: (data) => {
-      console.log('Address updated successfully:', data); // Debug log
+    mutationFn: ({ storeId, addressData }: { storeId: number, addressData: typeof addressFormData }) =>
+      apiService.updateStoreAddress(storeId, addressData),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stores'] });
       setIsAddressOpen(false);
       resetAddressForm();
       toast({ title: 'Store address updated successfully' });
     },
     onError: (error) => {
-      console.error('Error updating address:', error); // Debug log
       toast({ title: 'Error updating store address', description: error.message, variant: 'destructive' });
     }
   });
@@ -247,8 +239,6 @@ export const Stores: React.FC = () => {
       latitude: 0,
       longitude: 0,
     });
-    setCitySearch('');
-    setProvinceSearch('');
     setSelectedStore(null);
   };
 
@@ -270,10 +260,8 @@ export const Stores: React.FC = () => {
   };
 
   const handleAddressEdit = (store: any) => {
-    console.log('Opening address dialog for store:', store); // Debug log
     setSelectedStore(store);
     if (store.address) {
-      console.log('Store has existing address:', store.address); // Debug log
       setAddressFormData({
         street: store.address.street || '',
         city: store.address.city || '',
@@ -283,15 +271,7 @@ export const Stores: React.FC = () => {
         longitude: store.address.longitude || 0,
       });
     } else {
-      console.log('Store has no existing address, using empty form'); // Debug log
-      setAddressFormData({
-        street: '',
-        city: '',
-        province: '',
-        postalCode: '',
-        latitude: 0,
-        longitude: 0,
-      });
+      resetAddressForm();
     }
     setIsAddressOpen(true);
   };
@@ -299,7 +279,7 @@ export const Stores: React.FC = () => {
   const handleProductStore = (store: any) => {
     setSelectedStore(store);
     setProductStoreFormData({
-      storeId: store.id || store.storeId,
+      storeId: store.id,
       productId: 0,
     });
     setIsProductStoreOpen(true);
@@ -310,7 +290,7 @@ export const Stores: React.FC = () => {
     
     if (selectedStore) {
       updateMutation.mutate({
-         id: selectedStore.id || selectedStore.storeId,
+         id: selectedStore.id,
          name: formData.name,
          ownerName: formData.ownerName,
          imageFile: selectedFile || undefined
@@ -327,20 +307,15 @@ export const Stores: React.FC = () => {
   const handleAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Address form data:', addressFormData); // Debug log
-    console.log('Selected store:', selectedStore); // Debug log
-    
     if (selectedStore) {
       if (selectedStore.address) {
-        console.log('Updating existing address'); // Debug log
         updateAddressMutation.mutate({
-          storeId: selectedStore.id || selectedStore.storeId,
+          storeId: selectedStore.id,
           addressData: addressFormData
         });
       } else {
-        console.log('Adding new address'); // Debug log
         addAddressMutation.mutate({
-          storeId: selectedStore.id || selectedStore.storeId,
+          storeId: selectedStore.id,
           addressData: addressFormData
         });
       }
@@ -356,26 +331,14 @@ export const Stores: React.FC = () => {
     });
   };
 
-  // Data processing - handle both possible response structures
-  
-  // Try different possible structures based on API response
-  let stores_data = [];
-  if (stores?.data?.data && Array.isArray(stores.data.data)) {
-    // Nested structure like Categories
-    stores_data = stores.data.data;
-  } else if (stores?.data && Array.isArray(stores.data)) {
-    // Direct structure from API spec
-    stores_data = stores.data;
-  } else {
-    stores_data = [];
-  }
-  
-  const totalItems = stores_data.length;
+  // Data processing
+  const stores_data = stores?.data || [];
+  const totalItems = stores?.message ? stores_data.length : 0;
   const totalPages = Math.ceil(totalItems / pageSize);
 
   const filteredStores = stores_data.filter((store: any) =>
-    store?.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-    store?.ownerName?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    store.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+    store.ownerName.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
   const displayTotalItems = `${totalItems}`;
@@ -494,15 +457,17 @@ export const Stores: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-2 mt-4">
-              <Search className="w-4 h-4" />
-              <Input
-                placeholder="Search stores..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
+            <CardDescription>
+              <div className="flex items-center space-x-2">
+                <Search className="w-4 h-4" />
+                <Input
+                  placeholder="Search stores..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg">
@@ -519,26 +484,26 @@ export const Stores: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredStores.map((store: any) => (
-                    <TableRow key={store.id || store.storeId}>
+                    <TableRow key={store.id}>
                       <TableCell>
                         <img
-                          src={store.imageUrl ? `${BASE_URL}/${store.imageUrl}` : '/placeholder.svg'}
-                          alt={store.name || 'Store'}
+                          src={store.imageUrl || '/placeholder.svg'}
+                          alt={store.name}
                           className="w-10 h-10 rounded object-cover"
                         />
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          {/* <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center">
                             <Store className="w-5 h-5 text-gray-600" />
-                          </div> */}
+                          </div>
                           <div>
-                            <div className="font-medium">{store.name || 'Unknown Store'}</div>
-                            <div className="text-sm text-gray-500">ID: {store.id || store.storeId}</div>
+                            <div className="font-medium">{store.name}</div>
+                            <div className="text-sm text-gray-500">ID: {store.id}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{store.ownerName || 'Unknown Owner'}</TableCell>
+                      <TableCell>{store.ownerName}</TableCell>
                       <TableCell>
                         <div className="max-w-xs">
                           {store.address ? (
@@ -612,7 +577,7 @@ export const Stores: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => softDeleteMutation.mutate(store.id || store.storeId)}
+                                  onClick={() => softDeleteMutation.mutate(store.id)}
                                   className="hover:bg-orange-50 hover:border-orange-300"
                                   disabled={softDeleteMutation.isPending}
                                 >
@@ -629,7 +594,7 @@ export const Stores: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => unDeleteMutation.mutate(store.id || store.storeId)}
+                                  onClick={() => unDeleteMutation.mutate(store.id)}
                                   className="hover:bg-green-50 hover:border-green-300"
                                   disabled={unDeleteMutation.isPending}
                                 >
@@ -647,7 +612,7 @@ export const Stores: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => hardDeleteMutation.mutate(store.id || store.storeId)}
+                                onClick={() => hardDeleteMutation.mutate(store.id)}
                                 className="hover:bg-red-50 hover:border-red-300"
                                 disabled={hardDeleteMutation.isPending}
                               >
@@ -766,7 +731,7 @@ export const Stores: React.FC = () => {
                   {selectedStore?.imageUrl && (
                     <div className="mt-2">
                       <img
-                        src={`${BASE_URL}/${selectedStore.imageUrl}`}
+                        src={selectedStore.imageUrl}
                         alt="Current store image"
                         className="w-20 h-20 rounded object-cover"
                       />

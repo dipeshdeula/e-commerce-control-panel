@@ -105,6 +105,21 @@ class ApiService extends BaseApiService {
 
   // Store Management
   getStores = this.storeService.getStores.bind(this.storeService);
+  createStore = this.storeService.createStore.bind(this.storeService);
+  updateStore = this.storeService.updateStore.bind(this.storeService);
+  softDeleteStore = this.storeService.softDeleteStore.bind(this.storeService);
+  unDeleteStore = this.storeService.unDeleteStore.bind(this.storeService);
+  hardDeleteStore = this.storeService.hardDeleteStore.bind(this.storeService);
+  
+  // Store Address methods
+  addStoreAddress = this.storeService.addStoreAddress.bind(this.storeService);
+  updateStoreAddress = this.storeService.updateStoreAddress.bind(this.storeService);
+  
+  // Product Store methods
+  createProductStore = this.storeService.createProductStore.bind(this.storeService);
+  getAllProductStore = this.storeService.getAllProductStore.bind(this.storeService);
+  getProductsByStoreId = this.storeService.getProductsByStoreId.bind(this.storeService);
+
 
   // Company Info Management
   getAllCompanyInfo = this.companyService.getAllCompanyInfo.bind(this.companyService);
