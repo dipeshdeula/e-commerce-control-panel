@@ -1,58 +1,109 @@
 
 import { BaseApiService } from '@/shared/services/base-api';
-import { TransactionDTO } from '@/types/api';
+
+export interface PaymentRequestDTO {
+  id: number;
+  userId: number;
+  orderId: number;
+  paymentMethodId: number;
+  paymentAmount: number;
+  currency: string;
+  description: string;
+  paymentStatus: string;
+  paymentUrl?: string;
+  khaltiPidx?: string;
+  esewaTransactionId?: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  instructions: string;
+  requiresRedirect: boolean;
+  metadata: {
+    provider: string;
+    transactionId: string;
+    hasPaymentUrl: string;
+  };
+  userName: string;
+  paymentMethodName: string;
+  orderTotal: number;
+}
+
+export interface PaymentRequestParams {
+  pageNumber?: number;
+  pageSize?: number;
+  status?: string;
+  paymentMethodId?: number;
+  fromDate?: string;
+  toDate?: string;
+  searchTerm?: string;
+  orderBy?: string;
+}
+
+export interface PaymentRequestResponse {
+  message: string;
+  data: PaymentRequestDTO[];
+  totalCount: number;
+  totalPages: number;
+  pageSize: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
 
 export class TransactionService extends BaseApiService {
-  async getTransactions(page?: number, pageSize?: number) {
-    let url = `${this.BASE_URL}/transaction`;
-    if (page && pageSize) {
-      url += `?page=${page}&pageSize=${pageSize}`;
+  async getPaymentRequests(params?: PaymentRequestParams) {
+    let url = `${this.BASE_URL}/payment/requests`;
+    const searchParams = new URLSearchParams();
+    
+    if (params?.pageNumber) searchParams.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString());
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.paymentMethodId) searchParams.append('PaymentMethodId', params.paymentMethodId.toString());
+    if (params?.fromDate) searchParams.append('FromDate', params.fromDate);
+    if (params?.toDate) searchParams.append('ToDate', params.toDate);
+    if (params?.searchTerm) searchParams.append('SearchTerm', params.searchTerm);
+    if (params?.orderBy) searchParams.append('OrderBy', params.orderBy);
+    
+    if (searchParams.toString()) {
+      url += `?${searchParams.toString()}`;
     }
+
     const response = await fetch(url, {
       headers: this.getAuthHeaders()
     });
-    return this.handleResponse<TransactionDTO[]>(response);
+    return this.handleResponse<PaymentRequestResponse>(response);
+  }
+
+  async getPaymentRequestsByUserId(userId: number, params?: PaymentRequestParams) {
+    let url = `${this.BASE_URL}/payment/user/${userId}`;
+    const searchParams = new URLSearchParams();
+    
+    if (params?.pageNumber) searchParams.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) searchParams.append('pageSize', params.pageSize.toString());
+    if (params?.orderBy) searchParams.append('OrderBy', params.orderBy);
+    
+    if (searchParams.toString()) {
+      url += `?${searchParams.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<{ message: string; data: PaymentRequestDTO[] }>(response);
+  }
+
+  async getPaymentRequestById(id: number) {
+    const response = await fetch(`${this.BASE_URL}/payment/requests/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<PaymentRequestDTO>(response);
+  }
+
+  // Legacy transaction methods for backward compatibility
+  async getTransactions(page?: number, pageSize?: number) {
+    return this.getPaymentRequests({ pageNumber: page, pageSize });
   }
 
   async getTransactionById(id: number) {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  async createTransaction(transaction: Omit<TransactionDTO, 'transactionId'>) {
-    const response = await fetch(`${this.BASE_URL}/transaction`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(transaction)
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  async updateTransaction(id: number, transaction: Partial<TransactionDTO>) {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(transaction)
-    });
-    return this.handleResponse<TransactionDTO>(response);
-  }
-
-  async deleteTransaction(id: number) {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders()
-    });
-    return this.handleResponse<void>(response);
-  }
-
-  async updateTransactionStatus(id: number, status: string) {
-    const response = await fetch(`${this.BASE_URL}/transaction/${id}/status`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ status })
-    });
-    return this.handleResponse<TransactionDTO>(response);
+    return this.getPaymentRequestById(id);
   }
 }

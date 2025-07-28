@@ -7,6 +7,7 @@ import { CategoryService } from './category-service';
 import { ProductService } from './product-service';
 import { OrderService } from './order-service';
 import { PaymentService } from './payment-service';
+import { PaymentMethodService } from './payment-method-service';
 import { StoreService } from './store-service';
 import { CompanyService } from './company-service';
 import { BillingService } from './billing-service';
@@ -24,6 +25,7 @@ class ApiService extends BaseApiService {
   private productService = new ProductService();
   private orderService = new OrderService();
   private paymentService = new PaymentService();
+  private paymentMethodService = new PaymentMethodService();
   private storeService = new StoreService();
   private companyService = new CompanyService();
   private billingService = new BillingService();
@@ -92,16 +94,18 @@ class ApiService extends BaseApiService {
   updateOrderStatus = this.orderService.updateOrderStatus.bind(this.orderService);
 
   // Payment Method Management
-  getPaymentMethods = this.paymentService.getPaymentMethods.bind(this.paymentService);
-  createPaymentMethod = this.paymentService.createPaymentMethod.bind(this.paymentService);
-  updatePaymentMethod = this.paymentService.updatePaymentMethod.bind(this.paymentService);
-  deletePaymentMethod = this.paymentService.deletePaymentMethod.bind(this.paymentService);
+  createPaymentMethod = this.paymentMethodService.createPaymentMethod.bind(this.paymentMethodService);
+  getAllPaymentMethods = this.paymentMethodService.getAllPaymentMethods.bind(this.paymentMethodService);
+  updatePaymentMethod = this.paymentMethodService.updatePaymentMethod.bind(this.paymentMethodService);
+  softDeletePaymentMethod = this.paymentMethodService.softDeletePaymentMethod.bind(this.paymentMethodService);
+  unDeletePaymentMethod = this.paymentMethodService.unDeletePaymentMethod.bind(this.paymentMethodService);
+  hardDeletePaymentMethod = this.paymentMethodService.hardDeletePaymentMethod.bind(this.paymentMethodService);
 
-  // Payment Request Management
-  getPaymentRequests = this.paymentService.getPaymentRequests.bind(this.paymentService);
-  createPaymentRequest = this.paymentService.createPaymentRequest.bind(this.paymentService);
-  updatePaymentRequest = this.paymentService.updatePaymentRequest.bind(this.paymentService);
-  deletePaymentRequest = this.paymentService.deletePaymentRequest.bind(this.paymentService);
+  // Legacy Payment Method Management (from payment service)
+  getPaymentMethods = this.paymentService.getPaymentMethods.bind(this.paymentService);
+  createPaymentMethodLegacy = this.paymentService.createPaymentMethod.bind(this.paymentService);
+  updatePaymentMethodLegacy = this.paymentService.updatePaymentMethod.bind(this.paymentService);
+  deletePaymentMethod = this.paymentService.deletePaymentMethod.bind(this.paymentService);
 
   // Store Management
   getStores = this.storeService.getStores.bind(this.storeService);
@@ -134,13 +138,12 @@ class ApiService extends BaseApiService {
   updateBilling = this.billingService.updateBilling.bind(this.billingService);
   deleteBilling = this.billingService.deleteBilling.bind(this.billingService);
 
-  // Transaction Management
+  // Transaction Management (Payment Requests)
   getTransactions = this.transactionService.getTransactions.bind(this.transactionService);
   getTransactionById = this.transactionService.getTransactionById.bind(this.transactionService);
-  createTransaction = this.transactionService.createTransaction.bind(this.transactionService);
-  updateTransaction = this.transactionService.updateTransaction.bind(this.transactionService);
-  deleteTransaction = this.transactionService.deleteTransaction.bind(this.transactionService);
-  updateTransactionStatus = this.transactionService.updateTransactionStatus.bind(this.transactionService);
+  getPaymentRequests = this.transactionService.getPaymentRequests.bind(this.transactionService);
+  getPaymentRequestsByUserId = this.transactionService.getPaymentRequestsByUserId.bind(this.transactionService);
+  getPaymentRequestById = this.transactionService.getPaymentRequestById.bind(this.transactionService);
 }
 
 export const apiService = new ApiService();

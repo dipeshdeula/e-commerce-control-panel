@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,15 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -31,421 +22,396 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Search, CheckCircle, XCircle, Clock, DollarSign } from 'lucide-react';
+import { Search, Calendar, Filter, FileText, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { PaymentMethodType } from '@/types/api';
+
+interface PaymentRequestFilters {
+  status?: string;
+  paymentMethod?: string;
+  startDate?: string;
+  endDate?: string;
+  ordering?: string;
+}
 
 export const PaymentRequests: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    userId: '',
-    orderId: '',
-    paymentAmount: '',
-    paymentMethodId: '',
-    paymentStatus: 'pending',
+  const [filters, setFilters] = useState<PaymentRequestFilters>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Fetch payment requests with filters
+  const { data: paymentRequests, isLoading, error } = useQuery({
+    queryKey: ['paymentRequests', searchTerm, filters, currentPage, pageSize],
+    queryFn: async () => {
+      const response = await apiService.getPaymentRequests({
+        searchTerm: searchTerm || undefined,
+        pageNumber: currentPage,
+        pageSize,
+        status: filters.status,
+        paymentMethodId: filters.paymentMethod ? parseInt(filters.paymentMethod) : undefined,
+        fromDate: filters.startDate,
+        toDate: filters.endDate,
+        orderBy: filters.ordering,
+      });
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch payment requests');
+      }
+      return response;
+    },
   });
 
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  console.log("payment request:", paymentRequests);
 
-  const { data: paymentRequests, isLoading } = useQuery({
-    queryKey: ['paymentRequests'],
-    queryFn: () => apiService.getPaymentRequests(),
-  });
-
+  // Fetch payment methods for filter dropdown
   const { data: paymentMethods } = useQuery({
     queryKey: ['paymentMethods'],
-    queryFn: () => apiService.getPaymentMethods(),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) => apiService.createPaymentRequest(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paymentRequests'] });
-      setIsCreateOpen(false);
-      resetForm();
-      toast({ title: 'Payment request created successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error creating payment request', description: error.message, variant: 'destructive' });
+    queryFn: async () => {
+      const response = await apiService.getAllPaymentMethods();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch payment methods');
+      }
+      return response;
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiService.updatePaymentRequest(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paymentRequests'] });
-      setIsEditOpen(false);
-      resetForm();
-      toast({ title: 'Payment request updated successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error updating payment request', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiService.deletePaymentRequest(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paymentRequests'] });
-      toast({ title: 'Payment request deleted successfully' });
-    },
-    onError: (error) => {
-      toast({ title: 'Error deleting payment request', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const resetForm = () => {
-    setFormData({
-      userId: '',
-      orderId: '',
-      paymentAmount: '',
-      paymentMethodId: '',
-      paymentStatus: 'pending',
-    });
-    setSelectedPaymentRequest(null);
+  const handleFilterChange = (key: keyof PaymentRequestFilters, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: (value === 'all' || value === 'default') ? undefined : value,
+    }));
+    setCurrentPage(1);
   };
 
-  const handleEdit = (paymentRequest: any) => {
-    setSelectedPaymentRequest(paymentRequest);
-    setFormData({
-      userId: paymentRequest.userId?.toString() || '',
-      orderId: paymentRequest.orderId?.toString() || '',
-      paymentAmount: paymentRequest.paymentAmount?.toString() || '',
-      paymentMethodId: paymentRequest.paymentMethodId?.toString() || '',
-      paymentStatus: paymentRequest.paymentStatus || 'pending',
-    });
-    setIsEditOpen(true);
+  const clearFilters = () => {
+    setFilters({});
+    setSearchTerm('');
+    setCurrentPage(1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const submitData = {
-      ...formData,
-      userId: parseInt(formData.userId),
-      orderId: parseInt(formData.orderId),
-      paymentAmount: parseFloat(formData.paymentAmount),
-      paymentMethodId: parseInt(formData.paymentMethodId),
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { variant: 'secondary' as const, icon: Clock, className: 'bg-yellow-100 text-yellow-700' },
+      completed: { variant: 'default' as const, icon: CheckCircle2, className: 'bg-green-100 text-green-700' },
+      failed: { variant: 'destructive' as const, icon: XCircle, className: 'bg-red-100 text-red-700' },
+      cancelled: { variant: 'secondary' as const, icon: AlertCircle, className: 'bg-gray-100 text-gray-700' },
     };
 
-    if (selectedPaymentRequest) {
-      updateMutation.mutate({ id: selectedPaymentRequest.id, data: submitData });
-    } else {
-      createMutation.mutate(submitData);
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const IconComponent = config.icon;
+
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        <IconComponent className="w-3 h-3 mr-1" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
+  const getPaymentMethodName = (id: number) => {
+    // Try to find the payment method from the fetched data first
+    const paymentMethod = paymentMethods?.data?.data?.find((pm: any) => pm.id === id);
+    if (paymentMethod) {
+      return paymentMethod.name;
+    }
+    
+    // Fallback to type-based names
+    switch (id) {
+      case 1: return 'eSewa';
+      case 2: return 'Khalti';  
+      case 3: return 'Cash on Delivery';
+      default: return 'Unknown';
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'rejected':
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      default:
-        return <DollarSign className="w-4 h-4 text-gray-500" />;
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NP', {
+      style: 'currency',
+      currency: 'NPR',
+    }).format(amount);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-NP', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
-  const filteredPaymentRequests = paymentRequests?.data?.filter((request: any) => {
-    const matchesSearch = 
-      request.id.toString().includes(searchTerm) ||
-      request.orderId.toString().includes(searchTerm) ||
-      request.userId.toString().includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || request.paymentStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  }) || [];
+  const getPaymentRequestsArray = () => {
+    if (!paymentRequests?.data?.data) return [];
+    
+    if (Array.isArray(paymentRequests.data.data)) {
+      return paymentRequests.data.data;
+    }
+    
+    return [];
+  };
+
+  const paymentRequestsArray = getPaymentRequestsArray();
+  const totalItems = paymentRequests?.data?.totalCount || 0;
+  const totalPages = Math.ceil(totalItems / pageSize);
 
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Payment Requests</h1>
-          <p className="text-gray-600">Manage payment requests and transactions</p>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Payment Requests</h1>
+            <p className="text-gray-600">Monitor and manage payment requests</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="px-3 py-1">
+              {totalItems} Total Requests
+            </Badge>
+          </div>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Payment Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
-                <DialogTitle>Create New Payment Request</DialogTitle>
-                <DialogDescription>Add a new payment request</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="userId">User ID</Label>
-                  <Input
-                    id="userId"
-                    type="number"
-                    value={formData.userId}
-                    onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="orderId">Order ID</Label>
-                  <Input
-                    id="orderId"
-                    type="number"
-                    value={formData.orderId}
-                    onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentAmount">Payment Amount</Label>
-                  <Input
-                    id="paymentAmount"
-                    type="number"
-                    step="0.01"
-                    value={formData.paymentAmount}
-                    onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentMethodId">Payment Method</Label>
-                  <Select value={formData.paymentMethodId} onValueChange={(value) => setFormData({ ...formData, paymentMethodId: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a payment method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods?.data?.map((method: any) => (
-                        <SelectItem key={method.id} value={method.id.toString()}>
-                          {method.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="paymentStatus">Status</Label>
-                  <Select value={formData.paymentStatus} onValueChange={(value) => setFormData({ ...formData, paymentStatus: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create Payment Request'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Requests List</CardTitle>
-          <CardDescription>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4" />
-                <Input
-                  placeholder="Search payment requests..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Filter className="w-5 h-5" />
+              <span>Filters</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search requests..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Request ID</TableHead>
-                <TableHead>User ID</TableHead>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Payment Method</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPaymentRequests.map((request: any) => (
-                <TableRow key={request.id}>
-                  <TableCell className="font-mono">#{request.id}</TableCell>
-                  <TableCell>{request.userId}</TableCell>
-                  <TableCell className="font-mono">#{request.orderId}</TableCell>
-                  <TableCell>${request.paymentAmount?.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {paymentMethods?.data?.find((method: any) => method.id === request.paymentMethodId)?.name || 'N/A'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(request.paymentStatus)}
-                      <Badge className={getStatusColor(request.paymentStatus)}>
-                        {request.paymentStatus}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(request)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(request.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>Edit Payment Request</DialogTitle>
-              <DialogDescription>Update payment request information</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-userId">User ID</Label>
-                <Input
-                  id="edit-userId"
-                  type="number"
-                  value={formData.userId}
-                  onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-orderId">Order ID</Label>
-                <Input
-                  id="edit-orderId"
-                  type="number"
-                  value={formData.orderId}
-                  onChange={(e) => setFormData({ ...formData, orderId: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-paymentAmount">Payment Amount</Label>
-                <Input
-                  id="edit-paymentAmount"
-                  type="number"
-                  step="0.01"
-                  value={formData.paymentAmount}
-                  onChange={(e) => setFormData({ ...formData, paymentAmount: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-paymentMethodId">Payment Method</Label>
-                <Select value={formData.paymentMethodId} onValueChange={(value) => setFormData({ ...formData, paymentMethodId: value })}>
+              
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={filters.status || 'all'} onValueChange={(value) => handleFilterChange('status', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a payment method" />
+                    <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    {paymentMethods?.data?.map((method: any) => (
-                      <SelectItem key={method.id} value={method.id.toString()}>
-                        {method.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-paymentStatus">Status</Label>
-                <Select value={formData.paymentStatus} onValueChange={(value) => setFormData({ ...formData, paymentStatus: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <Select value={filters.paymentMethod || 'all'} onValueChange={(value) => handleFilterChange('paymentMethod', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All methods" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All methods</SelectItem>
+                    <SelectItem value="1">eSewa</SelectItem>
+                    <SelectItem value="2">Khalti</SelectItem>
+                    <SelectItem value="3">Cash on Delivery</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Sort By</Label>
+                <Select value={filters.ordering || 'default'} onValueChange={(value) => handleFilterChange('ordering', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="-created_at">Newest First</SelectItem>
+                    <SelectItem value="created_at">Oldest First</SelectItem>
+                    <SelectItem value="-amount">Highest Amount</SelectItem>
+                    <SelectItem value="amount">Lowest Amount</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Updating...' : 'Update Payment Request'}
+
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={filters.startDate || ''}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    className="w-40"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={filters.endDate || ''}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    className="w-40"
+                  />
+                </div>
+              </div>
+              <Button variant="outline" onClick={clearFilters}>
+                Clear Filters
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Requests Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Payment Requests</CardTitle>
+              <div className="flex items-center space-x-2">
+                <Label>Show:</Label>
+                <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request ID</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Payment Method</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paymentRequestsArray.map((request: any) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-mono text-sm">
+                      #{request.id}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{request.userName || 'Unknown User'}</span>
+                        <span className="text-sm text-gray-500">User ID: {request.userId}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {formatCurrency(request.paymentAmount)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {request.paymentMethodName || getPaymentMethodName(request.paymentMethodId)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(request.paymentStatus)}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {formatDate(request.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View Details</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {paymentRequestsArray.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>No payment requests found</p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-gray-600">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} entries
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => Math.abs(page - currentPage) <= 2)
+                      .map(page => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </TooltipProvider>
   );
 };

@@ -30,15 +30,24 @@ export class BaseApiService {
   protected async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     try {
       const data = await response.json();
-      return {
-        success: response.ok,
-        data: response.ok ? data : undefined,
-        message: response.ok ? undefined : data.message || 'An error occurred'
-      };
+      
+      if (response.ok) {
+        return {
+          success: true,
+          data: data,
+          message: data.message
+        };
+      } else {
+        return {
+          success: false,
+          data: undefined,
+          message: data.message || data.error || `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
     } catch (error) {
       return {
         success: false,
-        message: 'Failed to parse response'
+        message: `Failed to parse response: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }

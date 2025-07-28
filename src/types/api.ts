@@ -389,8 +389,8 @@ export interface SubSubCategoryListResponse {
 // Payment Method types
 export interface PaymentMethodDTO {
   id: number;
-  name: string;
-  description: string;
+  name: string; 
+  type: number; // 1: esewa , 2:khalti , 3: Cod
   isActive: boolean;
   imageUrl?: string;
 }
@@ -398,6 +398,65 @@ export interface PaymentMethodDTO {
 export interface PaymentMethodListResponse {
   message: string;
   data: PaymentMethodDTO[];
+}
+
+// Updated Payment Method types for new API
+export enum PaymentMethodType {
+  Esewa = 1,
+  Khalti = 2,
+  COD = 3
+}
+
+export interface NewPaymentMethodDTO {
+  id: number;
+  name: string;
+  type: PaymentMethodType;
+  logo: string;
+  paymentRequests?: PaymentRequestDetailDTO[];
+  isDeleted?: boolean;
+}
+
+// Payment Request types for new API
+export interface PaymentRequestDetailDTO {
+  id: number;
+  userId: number;
+  orderId: number;
+  paymentMethodId: number;
+  paymentAmount: number;
+  currency: string;
+  description: string;
+  paymentStatus: string;
+  paymentUrl?: string;
+  khaltiPidx?: string;
+  esewaTransactionId?: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  instructions: string;
+  requiresRedirect: boolean;
+  metadata: {
+    provider: string;
+    transactionId: string;
+    hasPaymentUrl: string;
+  };
+  userName: string;
+  paymentMethodName: string;
+  orderTotal: number;
+}
+
+export interface PaymentRequestResponse {
+  message: string;
+  data: PaymentRequestDetailDTO[];
+  totalCount: number;
+  totalPages: number;
+  pageSize: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PaymentRequestByUserResponse {
+  message: string;
+  data: PaymentRequestDetailDTO[];
 }
 
 // Billing types
