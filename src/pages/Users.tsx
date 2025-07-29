@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
-import { Role, getRoleDisplayInfo, getRoleNameFromId } from '@/types/api';
+import { Role, getRoleDisplayInfo, getRoleNameFromId, getRoleIdFromName, RoleDisplayNames } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,7 +61,8 @@ import {
   UserX,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Settings
 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api.config';
 
@@ -91,11 +92,16 @@ interface User {
 export const Users: React.FC = () => {
   console.log('Users component rendering...');
   
+  // Error state for component-level error handling
+  const [componentError, setComponentError] = useState<string | null>(null);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isOtpOpen, setIsOtpOpen] = useState(false);
+  const [isRoleUpdateOpen, setIsRoleUpdateOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<number>(Role.User);
   const [tempRegistrationData, setTempRegistrationData] = useState<any>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -114,6 +120,65 @@ export const Users: React.FC = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Component error boundary
+  if (componentError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <UserX className="w-16 h-16 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Component Error</h3>
+        <p className="text-gray-600 mb-4">{componentError}</p>
+        <Button 
+          onClick={() => {
+            setComponentError(null);
+            window.location.reload();
+          }} 
+          variant="outline"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reload Page
+        </Button>
+      </div>
+    );
+  }
+
+  // Get current user role from token for authorization
+  const getCurrentUserRole = (): string => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return '';
+      
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role || '';
+    } catch {
+      return '';
+    }
+  };
+
+  // Helper function to extract role ID from user object
+  const getUserRoleId = (user: User): number => {
+    try {
+      if (user.roleId && typeof user.roleId === 'number') {
+        return user.roleId;
+      }
+      if (user.role && typeof user.role === 'number') {
+        return user.role;
+      }
+      if (typeof user.role === 'string') {
+        return getRoleIdFromName(user.role);
+      }
+      return Role.User; // Default fallback
+    } catch (error) {
+      console.error('Error extracting user role:', error, user);
+      return Role.User;
+    }
+  };
+
+  // Check if current user can update roles (SuperAdmin or Admin only)
+  const canUpdateRoles = (): boolean => {
+    const currentRole = getCurrentUserRole();
+    return currentRole === 'SuperAdmin' || currentRole === 'Admin';
+  };
 
   // Fetch users with improved error handling
   const { data: usersResponse, isLoading, error, refetch } = useQuery({
@@ -283,6 +348,33 @@ export const Users: React.FC = () => {
     },
   });
 
+  // Role update mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: number; role: number }) => 
+      apiService.updateUserRole(userId, role),
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsRoleUpdateOpen(false);
+      setSelectedUser(null);
+      setSelectedRole(Role.User); // Reset to default
+      toast({ 
+        title: 'Success', 
+        description: response?.data || 'User role updated successfully',
+        duration: 5000,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Role update error:', error);
+      const errorMessage = error?.message || 'Failed to update user role';
+      toast({ 
+        title: 'Error updating role', 
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000,
+      });
+    },
+  });
+
   // Helper functions
   const resetForm = () => {
     setFormData({
@@ -311,6 +403,41 @@ export const Users: React.FC = () => {
     setIsEditOpen(true);
   };
 
+  const handleRoleUpdate = (user: User) => {
+    try {
+      if (!user) {
+        console.error('No user provided to handleRoleUpdate');
+        return;
+      }
+      
+      if (!canUpdateRoles()) {
+        toast({
+          title: 'Access Denied',
+          description: 'Only SuperAdmin or Admin can update user roles',
+          variant: 'destructive',
+          duration: 5000,
+        });
+        return;
+      }
+      
+      console.log('Selected user for role update:', user);
+      const userRoleId = getUserRoleId(user);
+      console.log('Extracted user role ID:', userRoleId);
+      
+      setSelectedUser(user);
+      setSelectedRole(userRoleId);
+      setIsRoleUpdateOpen(true);
+    } catch (error) {
+      console.error('Error in handleRoleUpdate:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open role update dialog',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -337,6 +464,56 @@ export const Users: React.FC = () => {
   const handleOtpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     verifyOtpMutation.mutate(otpData);
+  };
+
+  const handleRoleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (!selectedUser) {
+        toast({
+          title: 'Error',
+          description: 'No user selected',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const userId = selectedUser.id || selectedUser.userId;
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'User ID not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Check if the role is actually being changed
+      const currentRoleId = getUserRoleId(selectedUser);
+      console.log('Comparing roles - Current:', currentRoleId, 'Selected:', selectedRole);
+      
+      if (currentRoleId === selectedRole) {
+        toast({
+          title: 'No Changes',
+          description: 'The selected role is the same as the current role',
+          variant: 'destructive',
+          duration: 3000,
+        });
+        return;
+      }
+
+      console.log('Submitting role update:', { userId, role: selectedRole });
+      updateRoleMutation.mutate({ userId, role: selectedRole });
+    } catch (error) {
+      console.error('Error in handleRoleSubmit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process role update',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
   };
 
   // Data processing with proper null checks
@@ -423,6 +600,13 @@ export const Users: React.FC = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+
+          {canUpdateRoles() && (
+            <div className="text-sm bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-200">
+              <Shield className="w-3 h-3 inline mr-1" />
+              Role Management Enabled
+            </div>
+          )}
           
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -577,16 +761,23 @@ export const Users: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {filteredUsers.length > 0 ? filteredUsers.map((user: User) => {
-                  const roleInfo = getRoleDisplayInfo(user.role);
-                  console.log("role info:", roleInfo);
-                  const userPhone = user.phone || user.contact;
-                  const userId = user.id || user.userId;
-                  const userImage = user.imageUrl || '';
-                  console.log("user image:", userImage);
-                  console.log("API_BASE_URL:", API_BASE_URL);
-                  console.log("Full image URL:", userImage ? `${API_BASE_URL}/${userImage}` : 'No image');
-                  
-                  return (
+                  try {
+                    const userRoleId = getUserRoleId(user);
+                    const roleInfo = getRoleDisplayInfo(userRoleId);
+                    console.log("User data for role update debug:", {
+                      name: user.name,
+                      roleId: user.roleId,
+                      role: user.role,
+                      extractedRoleId: userRoleId,
+                      roleInfo: roleInfo,
+                      id: user.id,
+                      userId: user.userId
+                    });
+                    const userPhone = user.phone || user.contact;
+                    const userId = user.id || user.userId;
+                    const userImage = user.imageUrl || '';
+                    
+                    return (
                     <TableRow key={userId || user.email} className="hover:bg-gray-50/50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -598,7 +789,8 @@ export const Users: React.FC = () => {
                                 className="w-10 h-10 rounded-full object-cover"
                                 onError={(e) => {
                                   console.error('Failed to load image:', `${API_BASE_URL}/${user.imageUrl}`);
-                                  e.currentTarget.style.display = 'none';
+                                  const target = e.currentTarget as HTMLImageElement;
+                                  target.style.display = 'none';
                                 }}
                               />
                             ) : (
@@ -614,10 +806,23 @@ export const Users: React.FC = () => {
                       
                       <TableCell>
                         <div className="space-y-1">
-                          <Badge variant="outline" className={roleInfo.color}>
-                            <Shield className="w-3 h-3 mr-1" />
-                            {roleInfo.label}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={roleInfo.color}>
+                              <Shield className="w-3 h-3 mr-1" />
+                              {roleInfo.label}
+                            </Badge>
+                            {canUpdateRoles() && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRoleUpdate(user)}
+                                className="h-6 px-2 text-xs hover:bg-purple-50 hover:text-purple-600"
+                                title="Change Role"
+                              >
+                                <Settings className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
                           <div>
                             <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs">
                               {user.isActive ? 'Active' : 'Inactive'}
@@ -655,6 +860,18 @@ export const Users: React.FC = () => {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+
+                          {canUpdateRoles() && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRoleUpdate(user)}
+                              className="hover:bg-purple-50 hover:text-purple-600"
+                              title="Update Role (Admin/SuperAdmin only)"
+                            >
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                          )}
                           
                           <Button
                             variant="outline"
@@ -727,6 +944,16 @@ export const Users: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   );
+                  } catch (error) {
+                    console.error('Error rendering user row:', error, user);
+                    return (
+                      <TableRow key={user.id || user.userId || user.email}>
+                        <TableCell colSpan={4} className="text-center py-4 text-red-500">
+                          Error displaying user: {user.name || 'Unknown'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
                 }) : (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-12">
@@ -816,6 +1043,172 @@ export const Users: React.FC = () => {
             <DialogFooter>
               <Button type="submit" disabled={verifyOtpMutation.isPending}>
                 {verifyOtpMutation.isPending ? 'Verifying...' : 'Verify OTP'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Update Dialog */}
+      <Dialog 
+        key={selectedUser?.id || selectedUser?.userId || 'role-dialog'}
+        open={isRoleUpdateOpen} 
+        onOpenChange={(open) => {
+          console.log('Dialog open state changed to:', open);
+          setIsRoleUpdateOpen(open);
+          if (!open) {
+            console.log('Closing dialog - resetting state');
+            setSelectedUser(null);
+            setSelectedRole(Role.User);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleRoleSubmit}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-purple-600" />
+                Update User Role
+              </DialogTitle>
+              <DialogDescription>
+                Change the role for {selectedUser?.name || 'selected user'}. This action requires admin privileges.
+                {/* Debug info - remove in production */}
+                {selectedUser && process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Debug: roleId={selectedUser.roleId}, roleStr={selectedUser.role}, extracted={getUserRoleId(selectedUser)}, selected={selectedRole}
+                  </div>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="role-select" className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Select New Role
+                </Label>
+                <Select 
+                  value={selectedRole.toString()} 
+                  onValueChange={(value) => {
+                    const newRole = parseInt(value);
+                    console.log('Role dropdown changed:', value, '=>', newRole, getRoleNameFromId(newRole));
+                    setSelectedRole(newRole);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-red-600" />
+                        SuperAdmin
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-orange-600" />
+                        Admin
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="3">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-blue-600" />
+                        Vendor
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="4">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-green-600" />
+                        Delivery Boy
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="5">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3 h-3 text-gray-600" />
+                        User
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-amber-600 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800 mb-1">Security Notice</p>
+                    <p className="text-amber-700">
+                      Role changes take effect immediately. Ensure you're assigning the appropriate permissions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedUser && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-blue-800">Current Role:</span>
+                      <Badge 
+                        variant="outline" 
+                        className="text-blue-700 border-blue-300"
+                      >
+                        <Shield className="w-3 h-3 mr-1" />
+                        {getRoleNameFromId(getUserRoleId(selectedUser))}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-blue-800">New Role:</span>
+                      <Badge 
+                        variant="default" 
+                        className={
+                          selectedRole === getUserRoleId(selectedUser)
+                            ? "bg-gray-500"
+                            : "bg-purple-600"
+                        }
+                      >
+                        <Shield className="w-3 h-3 mr-1" />
+                        {getRoleNameFromId(selectedRole)}
+                      </Badge>
+                    </div>
+                    {selectedRole === getUserRoleId(selectedUser) && (
+                      <div className="text-xs text-amber-600 mt-2 flex items-center gap-1 p-2 bg-amber-50 rounded border border-amber-200">
+                        <Shield className="w-3 h-3" />
+                        No changes will be made (same role selected)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsRoleUpdateOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={updateRoleMutation.isPending || !selectedUser}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {updateRoleMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Update Role
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>

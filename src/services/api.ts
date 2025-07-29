@@ -47,6 +47,7 @@ class ApiService extends BaseApiService {
   getUserById = this.userService.getUserById.bind(this.userService);
   //updateUserRole = this.userService.updateUserRole.bind(this.userService);
   updateUser = this.userService.updateUser.bind(this.userService);
+  updateUserRole = this.userService.updateUserRole.bind(this.userService);
   //uploadUserImage = this.userService.uploadUserImage.bind(this.userService);
   softDeleteUser = this.userService.softDeleteUser.bind(this.userService);
   hardDeleteUser = this.userService.hardDeleteUser.bind(this.userService);

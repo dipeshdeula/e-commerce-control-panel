@@ -109,4 +109,22 @@ export class UserService extends BaseApiService {
     }
     return result;
   }
+
+  // Update user role (for admins only)
+  async updateUserRole(userId: number, role: number) {
+    const formData = new FormData();
+    formData.append('Role', role.toString());
+
+    const response = await fetch(`${this.BASE_URL}/admin/updateUserRole?UserId=${userId}`, {
+      method: 'PUT',
+      headers: this.getFormHeaders(),
+      body: formData
+    });
+    
+    const result = await this.handleResponse<{ message: string; data: string }>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update user role');
+    }
+    return result;
+  }
 }
