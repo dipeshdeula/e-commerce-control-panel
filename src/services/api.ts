@@ -1,4 +1,3 @@
-
 import { BaseApiService } from '@/shared/services/base-api';
 import { AuthService } from './auth-service';
 import { DashboardService } from './dashboard-service';
@@ -45,6 +44,7 @@ class ApiService extends BaseApiService {
 
   // User Management
   getUsers = this.userService.getUsers.bind(this.userService);
+  getUserById = this.userService.getUserById.bind(this.userService);
   //updateUserRole = this.userService.updateUserRole.bind(this.userService);
   updateUser = this.userService.updateUser.bind(this.userService);
   //uploadUserImage = this.userService.uploadUserImage.bind(this.userService);
@@ -98,6 +98,9 @@ class ApiService extends BaseApiService {
   getOrdersByUserId = this.orderService.getOrdersByUserId.bind(this.orderService);
   confirmOrderStatus = this.orderService.confirmOrderStatus.bind(this.orderService);
   updateOrderStatus = this.orderService.updateOrderStatus.bind(this.orderService);
+  softDeleteOrder = this.orderService.softDeleteOrder.bind(this.orderService);
+  unDeleteOrder = this.orderService.unDeleteOrder.bind(this.orderService);
+  hardDeleteOrder = this.orderService.hardDeleteOrder.bind(this.orderService);
 
   // Notification Management
   getAllNotifications = this.notificationService.getAllNotifications.bind(this.notificationService);
@@ -157,6 +160,9 @@ class ApiService extends BaseApiService {
   getPaymentRequests = this.transactionService.getPaymentRequests.bind(this.transactionService);
   getPaymentRequestsByUserId = this.transactionService.getPaymentRequestsByUserId.bind(this.transactionService);
   getPaymentRequestById = this.transactionService.getPaymentRequestById.bind(this.transactionService);
+  softDeletePaymentRequest = this.transactionService.softDeletePaymentRequest.bind(this.transactionService);
+  unDeletePaymentRequest = this.transactionService.unDeletePaymentRequest.bind(this.transactionService);
+  hardDeletePaymentRequest = this.transactionService.hardDeletePaymentRequest.bind(this.transactionService);
 }
 
 export const apiService = new ApiService();

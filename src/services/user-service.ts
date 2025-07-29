@@ -22,6 +22,13 @@ export class UserService extends BaseApiService {
     return this.handleResponse<UserListDTO[]>(response);
   }
 
+  async getUserById(id: number) {
+    const response = await fetch(`${this.BASE_URL}/user/getUserById?id=${id}`, {
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<any>(response);
+  }
+
   // User registration (create new user)
   async register(userData: { name: string; email: string; password: string; contact: string }) {
     const response = await fetch(`${this.BASE_URL}/auth/register`, {

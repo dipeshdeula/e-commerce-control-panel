@@ -234,6 +234,8 @@ export const PaymentMethods: React.FC = () => {
     }
   };
 
+ 
+
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
   }

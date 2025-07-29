@@ -106,4 +106,30 @@ export class TransactionService extends BaseApiService {
   async getTransactionById(id: number) {
     return this.getPaymentRequestById(id);
   }
+
+  async softDeletePaymentRequest(id:number)
+  {
+    const response = await fetch(`${this.BASE_URL}/payment/softDeletePaymentRequest?Id=${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<PaymentRequestDTO>(response);
+  }
+
+  async unDeletePaymentRequest(id:number)
+  {
+    const response = await fetch(`${this.BASE_URL}/payment/unDeletePaymentRequest?Id=${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<PaymentRequestDTO>(response);
+  }
+  async hardDeletePaymentRequest(id:number)
+  {
+    const response = await fetch(`${this.BASE_URL}/payment/hardDeletePaymentRequest?Id=${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<PaymentRequestDTO>(response);
+  }
 }

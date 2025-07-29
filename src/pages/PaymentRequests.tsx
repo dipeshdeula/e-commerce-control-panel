@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery,useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,14 +21,31 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, Calendar, Filter, FileText, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Search, Calendar, Filter, FileText, Clock, CheckCircle2, XCircle, AlertCircle, Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { PaymentMethodType } from '@/types/api';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface PaymentRequestFilters {
   status?: string;
@@ -44,6 +60,14 @@ export const PaymentRequests: React.FC = () => {
   const [filters, setFilters] = useState<PaymentRequestFilters>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [goToPage,setGoToPage] = useState('');
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [localDeletedItems, setLocalDeletedItems] = useState<Set<number>>(new Set());
+  const [localRestoredItems, setLocalRestoredItems] = useState<Set<number>>(new Set());
+
+  const {toast} = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch payment requests with filters
   const { data: paymentRequests, isLoading, error } = useQuery({
@@ -66,7 +90,13 @@ export const PaymentRequests: React.FC = () => {
     },
   });
 
-  console.log("payment request:", paymentRequests);
+  // Clear local state when fresh data is loaded
+  React.useEffect(() => {
+    if (paymentRequests) {
+      setLocalDeletedItems(new Set());
+      setLocalRestoredItems(new Set());
+    }
+  }, [paymentRequests]);
 
   // Fetch payment methods for filter dropdown
   const { data: paymentMethods } = useQuery({
@@ -85,7 +115,7 @@ export const PaymentRequests: React.FC = () => {
       ...prev,
       [key]: (value === 'all' || value === 'default') ? undefined : value,
     }));
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const clearFilters = () => {
@@ -94,15 +124,38 @@ export const PaymentRequests: React.FC = () => {
     setCurrentPage(1);
   };
 
+  // Reset pagination when search term changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handleViewDetails = (request: any) => {
+    setSelectedRequest(request);
+    setIsDetailsOpen(true);
+  };
+
+  // Helper function to determine if a request is deleted
+  const isRequestDeleted = (request: any) => {
+    // Check local state first for immediate UI updates
+    if (localDeletedItems.has(request.id)) return true;
+    if (localRestoredItems.has(request.id)) return false;
+    
+    // Fall back to API response
+    return request.isDeleted === true;
+  };
+
   const getStatusBadge = (status: string) => {
+    const normalizedStatus = status.toLowerCase();
     const statusConfig = {
       pending: { variant: 'secondary' as const, icon: Clock, className: 'bg-yellow-100 text-yellow-700' },
+      succeeded: { variant: 'default' as const, icon: CheckCircle2, className: 'bg-green-100 text-green-700' },
       completed: { variant: 'default' as const, icon: CheckCircle2, className: 'bg-green-100 text-green-700' },
       failed: { variant: 'destructive' as const, icon: XCircle, className: 'bg-red-100 text-red-700' },
       cancelled: { variant: 'secondary' as const, icon: AlertCircle, className: 'bg-gray-100 text-gray-700' },
+      expired: { variant: 'secondary' as const, icon: AlertCircle, className: 'bg-orange-100 text-orange-700' },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const config = statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.pending;
     const IconComponent = config.icon;
 
     return (
@@ -147,17 +200,140 @@ export const PaymentRequests: React.FC = () => {
   };
 
   const getPaymentRequestsArray = () => {
-    if (!paymentRequests?.data?.data) return [];
+    if (!paymentRequests?.data) return [];
     
-    if (Array.isArray(paymentRequests.data.data)) {
-      return paymentRequests.data.data;
+    // Try different possible structures based on API response
+    let requests_data = [];
+    if (paymentRequests.data.data && Array.isArray(paymentRequests.data.data)) {
+      // Nested structure like { data: { data: [...] } }
+      requests_data = paymentRequests.data.data;
+    } else if (paymentRequests.data && Array.isArray(paymentRequests.data)) {
+      // Direct structure like { data: [...] }
+      requests_data = paymentRequests.data;
+    } else {
+      requests_data = [];
     }
     
-    return [];
+    // Debug: Check isDeleted property
+    if (requests_data.length > 0) {
+      console.log('Sample request data:', requests_data[0]);
+      console.log('isDeleted properties:', requests_data.map(r => ({ id: r.id, isDeleted: r.isDeleted })));
+    }
+    
+    return requests_data;
   };
 
+  const softDeleteMutation = useMutation({
+    mutationFn : (id:number)=> apiService.softDeletePaymentRequest(id),
+    onSuccess:(data, variables) => {
+      console.log('Soft delete response:', data);
+      // Update local state immediately for UI responsiveness
+      setLocalDeletedItems(prev => new Set([...prev, variables]));
+      setLocalRestoredItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables);
+        return newSet;
+      });
+      queryClient.invalidateQueries({queryKey:['paymentRequests']});
+      toast({title:'Payment request soft deleted successfully'});
+    },
+    onError: (error: any) => {
+      console.error('Soft delete error:', error);
+      toast({ 
+        title: 'Error deleting payment request', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const unDeleteMutation = useMutation({
+    mutationFn : (id:number)=> apiService.unDeletePaymentRequest(id),
+    onSuccess:(data, variables) => {
+      console.log('Undelete response:', data);
+      // Update local state immediately for UI responsiveness
+      setLocalRestoredItems(prev => new Set([...prev, variables]));
+      setLocalDeletedItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables);
+        return newSet;
+      });
+      queryClient.invalidateQueries({queryKey:['paymentRequests']});
+      toast({title:'Payment request restored successfully'});
+    },
+    onError: (error: any) => {
+      console.error('Undelete error:', error);
+      toast({ 
+        title: 'Error restoring payment request', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn:(id:number)=>apiService.hardDeletePaymentRequest(id),
+    onSuccess:()=>{
+      queryClient.invalidateQueries({queryKey:['paymentRequests']});
+      toast({title:'Payment request permanently deleted successfully'});
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error permanently deleting payment request', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+
   const paymentRequestsArray = getPaymentRequestsArray();
-  const totalItems = paymentRequests?.data?.totalCount || 0;
+  
+  // Apply client-side filtering and search
+  const filteredRequests = paymentRequestsArray.filter((request: any) => {
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      request.id.toString().includes(searchTerm) ||
+      request.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.paymentMethodName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.userId.toString().includes(searchTerm);
+    
+    // Status filter
+    const matchesStatus = !filters.status || request.paymentStatus.toLowerCase() === filters.status.toLowerCase();
+    
+    // Payment method filter
+    const matchesPaymentMethod = !filters.paymentMethod || 
+      request.paymentMethodId.toString() === filters.paymentMethod;
+    
+    // Date filters
+    const requestDate = new Date(request.createdAt);
+    const matchesStartDate = !filters.startDate || requestDate >= new Date(filters.startDate);
+    const matchesEndDate = !filters.endDate || requestDate <= new Date(filters.endDate + 'T23:59:59');
+    
+    return matchesSearch && matchesStatus && matchesPaymentMethod && matchesStartDate && matchesEndDate;
+  });
+  
+  // Apply sorting
+  const sortedRequests = [...filteredRequests].sort((a, b) => {
+    switch (filters.ordering) {
+      case '-created_at':
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'created_at':
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      case '-amount':
+        return b.paymentAmount - a.paymentAmount;
+      case 'amount':
+        return a.paymentAmount - b.paymentAmount;
+      default:
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+  });
+  
+  // Apply pagination
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedRequests = sortedRequests.slice(startIndex, endIndex);
+  
+  const totalItems = sortedRequests.length;
   const totalPages = Math.ceil(totalItems / pageSize);
 
   if (isLoading) {
@@ -211,9 +387,11 @@ export const PaymentRequests: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="succeeded">Succeeded</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -313,8 +491,11 @@ export const PaymentRequests: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paymentRequestsArray.map((request: any) => (
-                  <TableRow key={request.id}>
+                {paginatedRequests.map((request: any) => (
+                  <TableRow 
+                    key={request.id} 
+                    className={isRequestDeleted(request) ? 'bg-red-50 opacity-75' : ''}
+                  >
                     <TableCell className="font-mono text-sm">
                       #{request.id}
                     </TableCell>
@@ -333,7 +514,14 @@ export const PaymentRequests: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(request.paymentStatus)}
+                      <div className="flex flex-col space-y-1">
+                        {getStatusBadge(request.paymentStatus)}
+                        {isRequestDeleted(request) && (
+                          <Badge variant="destructive" className="text-xs">
+                            Deleted
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {formatDate(request.createdAt)}
@@ -346,12 +534,66 @@ export const PaymentRequests: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                              onClick={() => handleViewDetails(request)}
                             >
                               <FileText className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>View Details</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {!isRequestDeleted(request) ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600"
+                                onClick={() => softDeleteMutation.mutate(request.id)}
+                                disabled={softDeleteMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move to Trash (Soft Delete)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                onClick={() => unDeleteMutation.mutate(request.id)}
+                                disabled={unDeleteMutation.isPending}
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Restore Payment Request</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              onClick={() => hardDeleteMutation.mutate(request.id)}
+                              disabled={hardDeleteMutation.isPending}
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Permanently Delete</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -361,10 +603,13 @@ export const PaymentRequests: React.FC = () => {
               </TableBody>
             </Table>
 
-            {paymentRequestsArray.length === 0 && (
+            {paginatedRequests.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No payment requests found</p>
+                {(searchTerm || Object.values(filters).some(v => v)) && (
+                  <p className="text-sm mt-2">Try adjusting your search or filters</p>
+                )}
               </div>
             )}
 
@@ -411,6 +656,99 @@ export const PaymentRequests: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Payment Request Details Dialog */}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Payment Request Details - #{selectedRequest?.id}</DialogTitle>
+              <DialogDescription>
+                View complete payment request information
+              </DialogDescription>
+            </DialogHeader>
+            {selectedRequest && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">Payment Information</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">Request ID:</span> #{selectedRequest.id}</div>
+                      <div><span className="font-medium">Amount:</span> {formatCurrency(selectedRequest.paymentAmount)}</div>
+                      <div><span className="font-medium">Currency:</span> {selectedRequest.currency}</div>
+                      <div><span className="font-medium">Status:</span> {getStatusBadge(selectedRequest.paymentStatus)}</div>
+                      <div><span className="font-medium">Payment Method:</span> {selectedRequest.paymentMethodName}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Order & User Details</h3>
+                    <div className="space-y-2 text-sm">
+                      <div><span className="font-medium">User:</span> {selectedRequest.userName}</div>
+                      <div><span className="font-medium">User ID:</span> {selectedRequest.userId}</div>
+                      <div><span className="font-medium">Order ID:</span> {selectedRequest.orderId}</div>
+                      <div><span className="font-medium">Order Total:</span> {formatCurrency(selectedRequest.orderTotal)}</div>
+                      <div><span className="font-medium">Created:</span> {formatDate(selectedRequest.createdAt)}</div>
+                      <div><span className="font-medium">Updated:</span> {formatDate(selectedRequest.updatedAt)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedRequest.description && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Description</h3>
+                    <p className="text-sm bg-gray-50 p-3 rounded">{selectedRequest.description}</p>
+                  </div>
+                )}
+
+                {selectedRequest.instructions && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Instructions</h3>
+                    <p className="text-sm bg-gray-50 p-3 rounded">{selectedRequest.instructions}</p>
+                  </div>
+                )}
+
+                {(selectedRequest.esewaTransactionId || selectedRequest.khaltiPidx) && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Transaction Details</h3>
+                    <div className="space-y-2 text-sm">
+                      {selectedRequest.esewaTransactionId && (
+                        <div><span className="font-medium">eSewa Transaction ID:</span> {selectedRequest.esewaTransactionId}</div>
+                      )}
+                      {selectedRequest.khaltiPidx && (
+                        <div><span className="font-medium">Khalti PIDX:</span> {selectedRequest.khaltiPidx}</div>
+                      )}
+                      {selectedRequest.paymentUrl && (
+                        <div>
+                          <span className="font-medium">Payment URL:</span> 
+                          <a href={selectedRequest.paymentUrl} target="_blank" rel="noopener noreferrer" 
+                             className="text-blue-600 hover:text-blue-800 ml-2">
+                            Open Payment Link
+                          </a>
+                        </div>
+                      )}
+                      {selectedRequest.expiresAt && (
+                        <div><span className="font-medium">Expires At:</span> {formatDate(selectedRequest.expiresAt)}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedRequest.metadata && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Metadata</h3>
+                    <pre className="text-sm bg-gray-50 p-3 rounded overflow-auto">
+                      {JSON.stringify(selectedRequest.metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

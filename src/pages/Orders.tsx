@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Eye, CheckCircle, Clock, Package, Truck, AlertCircle, ShoppingBag, Filter } from 'lucide-react';
+import { Search, Eye, CheckCircle, Clock, Package, Truck, AlertCircle, ShoppingBag, Filter, Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 
 interface OrderFilters {
   orderStatus?: string;
@@ -54,6 +54,7 @@ export const Orders: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [userCache, setUserCache] = useState<Map<number, any>>(new Map());
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -79,6 +80,73 @@ export const Orders: React.FC = () => {
       return response;
     },
   });
+
+  console.log("order data:", orders);
+
+  // Fetch users for cache (load once, use many times)
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['users-cache'],
+    queryFn: async () => {
+      const response = await apiService.getUsers({ pageSize: 1000 }); // Get all users
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch users');
+      }
+      return response;
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Populate user cache when users data is available
+  React.useEffect(() => {
+    if (usersData?.data) {
+      const cache = new Map();
+      let users = [];
+      
+      // Handle different response structures
+      if (Array.isArray(usersData.data)) {
+        users = usersData.data;
+      } else if (usersData.data.data && Array.isArray(usersData.data.data)) {
+        users = usersData.data.data;
+      }
+      
+      users.forEach((user: any) => {
+        cache.set(user.id, {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          contact: user.contact
+        });
+      });
+      
+      setUserCache(cache);
+    }
+  }, [usersData]);
+
+  // Helper function to get user info
+  const getUserInfo = (userId: number) => {
+    const user = userCache.get(userId);
+    if (user) {
+      return user;
+    }
+    
+    // If cache is still loading, show loading state
+    if (isLoadingUsers) {
+      return { 
+        id: userId, 
+        name: 'Loading...', 
+        email: 'Loading...', 
+        contact: 'Loading...' 
+      };
+    }
+    
+    // Fallback for unknown users
+    return { 
+      id: userId, 
+      name: `User #${userId}`, 
+      email: 'Unknown', 
+      contact: 'N/A' 
+    };
+  };
 
   // Confirm order mutation
   const confirmOrderMutation = useMutation({
@@ -119,6 +187,11 @@ export const Orders: React.FC = () => {
     setSearchTerm('');
     setCurrentPage(1);
   };
+
+  // Reset pagination when search term changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const getOrderStatusBadge = (status: string) => {
     const statusConfig = {
@@ -190,7 +263,6 @@ export const Orders: React.FC = () => {
   };
 
   const ordersArray = getOrdersArray();
-  const totalItems = orders?.totalCount || orders?.data?.totalCount || ordersArray.length;
 
   // For development: add mock data if no orders are found
   const getMockOrdersForDev = () => {
@@ -246,7 +318,61 @@ export const Orders: React.FC = () => {
   };
 
   const displayOrders = getMockOrdersForDev();
-  const displayTotalItems = orders?.totalCount || orders?.data?.totalCount || displayOrders.length;
+  
+  // Apply client-side filtering and search
+  const filteredOrders = displayOrders.filter((order: any) => {
+    // Get user info for search
+    const userInfo = getUserInfo(order.userId);
+    
+    // Search filter - now includes user name and email
+    const matchesSearch = !searchTerm || 
+      order.id.toString().includes(searchTerm) ||
+      order.userId.toString().includes(searchTerm) ||
+      userInfo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userInfo.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.shippingAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.shippingCity?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Order status filter
+    const matchesOrderStatus = !filters.orderStatus || 
+      order.orderStatus.toLowerCase() === filters.orderStatus.toLowerCase();
+    
+    // Payment status filter
+    const matchesPaymentStatus = !filters.paymentStatus || 
+      order.paymentStatus.toLowerCase() === filters.paymentStatus.toLowerCase();
+    
+    // Date filters
+    const orderDate = new Date(order.orderDate);
+    const matchesStartDate = !filters.startDate || orderDate >= new Date(filters.startDate);
+    const matchesEndDate = !filters.endDate || orderDate <= new Date(filters.endDate + 'T23:59:59');
+    
+    return matchesSearch && matchesOrderStatus && matchesPaymentStatus && matchesStartDate && matchesEndDate;
+  });
+  
+  // Apply sorting
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    switch (filters.ordering) {
+      case '-orderDate':
+        return new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime();
+      case 'orderDate':
+        return new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime();
+      case '-totalAmount':
+        return b.totalAmount - a.totalAmount;
+      case 'totalAmount':
+        return a.totalAmount - b.totalAmount;
+      default:
+        return new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime();
+    }
+  });
+  
+  // Apply pagination
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedOrders = sortedOrders.slice(startIndex, endIndex);
+  
+  const totalItems = sortedOrders.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const displayTotalItems = totalItems;
 
   const handleViewDetails = (order: any) => {
     setSelectedOrder(order);
@@ -257,12 +383,71 @@ export const Orders: React.FC = () => {
     confirmOrderMutation.mutate({ orderId, isConfirmed: true });
   };
 
-  if (isLoading) {
+  // Helper function to determine if an order is deleted
+  const isOrderDeleted = (order: any) => {
+    return order.isDeleted === true;
+  };
+
+  const softDeleteMutation = useMutation({
+    mutationFn: (id: number) => apiService.softDeleteOrder(id),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast({ 
+        title: 'Order moved to trash', 
+        description: `Order #${variables} has been soft deleted successfully.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deleting order', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  const unDeleteMutation = useMutation({
+    mutationFn: (id: number) => apiService.unDeleteOrder(id),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast({ 
+        title: 'Order restored', 
+        description: `Order #${variables} has been restored successfully.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error restoring order', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  const hardDeleteMutation = useMutation({
+    mutationFn: (id: number) => apiService.hardDeleteOrder(id),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast({ 
+        title: 'Order permanently deleted', 
+        description: `Order #${variables} has been permanently deleted.` 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Error deleting order', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  if (isLoading || isLoadingUsers) {
     return (
       <div className="flex justify-center py-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p>Loading orders...</p>
+          <p>{isLoading ? 'Loading orders...' : 'Loading customer data...'}</p>
         </div>
       </div>
     );
@@ -294,6 +479,11 @@ export const Orders: React.FC = () => {
             <Badge variant="outline" className="px-3 py-1">
               {displayTotalItems} Total Orders
             </Badge>
+            {userCache.size > 0 && (
+              <Badge variant="secondary" className="px-3 py-1">
+                {userCache.size} Users Cached
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -312,7 +502,7 @@ export const Orders: React.FC = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search orders..."
+                    placeholder="Search by order ID, customer name, email, address..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -433,22 +623,33 @@ export const Orders: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayOrders.map((order: any) => (
-                  <TableRow key={order.id}>
+                {paginatedOrders.map((order: any) => (
+                  <TableRow 
+                    key={order.id}
+                    className={isOrderDeleted(order) ? 'bg-red-50 opacity-75' : ''}
+                  >
                     <TableCell className="font-mono text-sm">
                       #{order.id}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium">User #{order.userId}</span>
-                        <span className="text-sm text-gray-500">{order.shippingCity}</span>
+                        <span className="font-medium">{getUserInfo(order.userId).name}</span>
+                        <span className="text-sm text-gray-500">{getUserInfo(order.userId).email}</span>
+                        <span className="text-xs text-gray-400">ID: {order.userId} • {order.shippingCity}</span>
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold">
                       {formatCurrency(order.totalAmount)}
                     </TableCell>
                     <TableCell>
-                      {getOrderStatusBadge(order.orderStatus)}
+                      <div className="flex flex-col space-y-1">
+                        {getOrderStatusBadge(order.orderStatus)}
+                        {isOrderDeleted(order) && (
+                          <Badge variant="destructive" className="text-xs">
+                            Deleted
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {getPaymentStatusBadge(order.paymentStatus)}
@@ -479,7 +680,7 @@ export const Orders: React.FC = () => {
                           </TooltipContent>
                         </Tooltip>
                         
-                        {order.orderStatus.toLowerCase() === 'pending' && (
+                        {order.orderStatus.toLowerCase() === 'pending' && !isOrderDeleted(order) && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
@@ -497,6 +698,59 @@ export const Orders: React.FC = () => {
                             </TooltipContent>
                           </Tooltip>
                         )}
+
+                        {!isOrderDeleted(order) ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600"
+                                onClick={() => softDeleteMutation.mutate(order.id)}
+                                disabled={softDeleteMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move to Trash (Soft Delete)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                                onClick={() => unDeleteMutation.mutate(order.id)}
+                                disabled={unDeleteMutation.isPending}
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Restore Order</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                              onClick={() => hardDeleteMutation.mutate(order.id)}
+                              disabled={hardDeleteMutation.isPending}
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Permanently Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -504,7 +758,7 @@ export const Orders: React.FC = () => {
               </TableBody>
             </Table>
 
-            {displayOrders.length === 0 && !isLoading && (
+            {paginatedOrders.length === 0 && !isLoading && (
               <div className="text-center py-8 text-gray-500">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p className="mb-2">No orders found</p>
@@ -529,6 +783,48 @@ export const Orders: React.FC = () => {
                 )}
               </div>
             )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-gray-600">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} entries
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => Math.abs(page - currentPage) <= 2)
+                      .map(page => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -548,7 +844,9 @@ export const Orders: React.FC = () => {
                     <h3 className="font-semibold mb-2">Order Information</h3>
                     <div className="space-y-2 text-sm">
                       <div><span className="font-medium">Order ID:</span> #{selectedOrder.id}</div>
-                      <div><span className="font-medium">Customer:</span> User #{selectedOrder.userId}</div>
+                      <div><span className="font-medium">Customer:</span> {getUserInfo(selectedOrder.userId).name}</div>
+                      <div><span className="font-medium">Customer Email:</span> {getUserInfo(selectedOrder.userId).email}</div>
+                      <div><span className="font-medium">Customer Contact:</span> {getUserInfo(selectedOrder.userId).contact}</div>
                       <div><span className="font-medium">Order Date:</span> {formatDate(selectedOrder.orderDate)}</div>
                       <div><span className="font-medium">Total Amount:</span> {formatCurrency(selectedOrder.totalAmount)}</div>
                     </div>

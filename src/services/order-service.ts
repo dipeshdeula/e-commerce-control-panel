@@ -112,4 +112,31 @@ export class OrderService extends BaseApiService {
   async updateOrderStatus(orderId: number, status: string) {
     return this.confirmOrderStatus(orderId, status === 'Confirmed');
   }
+
+  async softDeleteOrder(orderId:number)
+  {
+    const response = await fetch(`${this.BASE_URL}/Order/softDeleteOrder?Id=${orderId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<OrderDTO>(response);
+  }
+
+  async unDeleteOrder(orderId:number)
+  {
+    const response = await fetch(`${this.BASE_URL}/Order/unDeleteOrder?Id=${orderId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<OrderDTO>(response);
+  }
+
+  async hardDeleteOrder(orderId:number)
+  {
+    const response = await fetch(`${this.BASE_URL}/Order/hardDeleteOrder?Id=${orderId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    return this.handleResponse<OrderDTO>(response);
+  }
 }
