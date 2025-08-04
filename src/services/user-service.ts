@@ -30,7 +30,7 @@ export class UserService extends BaseApiService {
   }
 
   // User registration (create new user)
-  async register(userData: { name: string; email: string; password: string; contact: string }) {
+  async register(userData: { name: string; email: string; password: string; contact: string; address?: string }) {
     const response = await fetch(`${this.BASE_URL}/auth/register`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -58,7 +58,7 @@ export class UserService extends BaseApiService {
   }
 
   // Update user
-  async updateUser(id: number, userData: { name: string; email: string; password?: string; contact: string }) {
+  async updateUser(id: number, userData: { name: string; email: string; password?: string; contact: string; address?: string }) {
     const response = await fetch(`${this.BASE_URL}/user/updateUser?id=${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
@@ -124,6 +124,36 @@ export class UserService extends BaseApiService {
     const result = await this.handleResponse<{ message: string; data: string }>(response);
     if (!result.success) {
       throw new Error(result.message || 'Failed to update user role');
+    }
+    return result;
+  }
+
+  // Update user image
+  async updateUserImage(userId: number, formData: FormData) {
+    const response = await fetch(`${this.BASE_URL}/user/updateUserImage?id=${userId}`, {
+      method: 'PUT',
+      headers: this.getFormHeaders(),
+      body: formData
+    });
+    
+    const result = await this.handleResponse<{ message: string }>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update user image');
+    }
+    return result;
+  }
+
+  // Update user address
+  async updateUserAddress(userId: number, addressData: { address: string }) {
+    const response = await fetch(`${this.BASE_URL}/user/updateUserAddress?id=${userId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(addressData)
+    });
+    
+    const result = await this.handleResponse<{ message: string }>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update user address');
     }
     return result;
   }

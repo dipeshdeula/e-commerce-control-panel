@@ -22,7 +22,10 @@ import {
   Box,
   User,
   Crown,
-  ShieldCheck
+  ShieldCheck,
+  Receipt,
+  Zap,
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -69,6 +72,14 @@ const navigation = [
     children: [
       { name: 'Payment Methods', href: '/payment-methods', icon: CreditCard },
       { name: 'Payment Requests', href: '/payment-requests', icon: FileText },
+      { name: 'Billing', href: '/billing', icon: Receipt },
+    ]
+  },
+  {
+    name: 'Marketing',
+    icon: Zap,
+    children: [
+      { name: 'Banner Events', href: '/banner-events', icon: Calendar },
     ]
   },
   { name: 'Company Info', href: '/company-info', icon: Building },
@@ -82,7 +93,7 @@ export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user, loading } = useAppSelector(state => state.auth);
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory', 'Payments', 'Store Management']);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Inventory', 'Payments', 'Marketing', 'Store Management']);
 
   const toggleExpanded = (itemName: string) => {
     setExpandedItems(prev => 

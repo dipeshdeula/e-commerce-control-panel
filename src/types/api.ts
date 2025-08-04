@@ -507,3 +507,64 @@ export interface TransactionDetailResponse {
   message: string;
   data: TransactionDTO;
 }
+
+// Company Info types
+export interface CompanyInfoDTO {
+  id?: number;
+  name: string;
+  email: string;
+  contact: string;
+  registrationNumber: string;
+  registeredPanNumber: string;
+  registeredVatNumber: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  logoUrl?: string;
+  websiteUrl: string;
+  createdAt?: string;
+  updateAt?: string;
+  updatedAt?: string;
+  isDeleted?: boolean;
+}
+
+export interface CreateCompanyInfoRequest {
+  name: string;
+  email: string;
+  contact: string;
+  registrationNumber: string;
+  registeredPanNumber: string;
+  registeredVatNumber: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  websiteUrl: string;
+  createdAt: string;
+}
+
+export interface UpdateCompanyInfoRequest {
+  name: string;
+  email: string;
+  contact: string;
+  registrationNumber: string;
+  registeredPanNumber: string;
+  registeredVatNumber: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  websiteUrl: string;
+  updatedAt: string;
+}
+
+export interface CompanyInfoListResponse {
+  message: string;
+  data: CompanyInfoDTO[];
+}
+
+export interface CompanyInfoDetailResponse {
+  message: string;
+  data: CompanyInfoDTO;
+}

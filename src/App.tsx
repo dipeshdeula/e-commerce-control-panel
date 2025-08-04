@@ -11,7 +11,7 @@ import Login from "@/pages/Login";
 import Products from "@/pages/Products";
 import { Categories } from "@/pages/Categories";
 import { SubCategories } from "@/pages/SubCategories";
-import { SubSubCategories } from "@/pages/SubSubCategoriesNew";
+import { SubSubCategories } from "@/pages/SubSubCategories";
 import { Orders } from "@/pages/Orders";
 import { Users } from "@/pages/Users";
 import { Stores } from "@/pages/Stores";
@@ -19,6 +19,8 @@ import { ProductStores } from "@/pages/ProductStores";
 import { Payments } from "@/pages/Payments";
 import { PaymentMethods } from "@/pages/PaymentMethods";
 import { PaymentRequests } from "@/pages/PaymentRequests";
+import { Billing } from "@/pages/Billing";
+import BannerEvents from "@/pages/BannerEvents";
 import { Settings } from "@/pages/Settings";
 import { Notifications } from "@/pages/Notifications";
 import { CompanyInfo } from "@/pages/CompanyInfo";
@@ -199,6 +201,26 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <PaymentRequests />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/billing"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Billing />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/banner-events"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <BannerEvents />
             </Layout>
           </ProtectedRoute>
         }

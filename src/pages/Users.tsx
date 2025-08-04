@@ -62,7 +62,10 @@ import {
   Mail,
   Phone,
   MapPin,
-  Settings
+  Settings,
+  Camera,
+  Upload,
+  Image
 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api.config';
 
@@ -71,6 +74,7 @@ interface UserFormValues {
   email: string;
   password?: string;
   contact: string;  // Changed from phone to contact
+  address?: string;
 }
 
 interface User {
@@ -100,16 +104,20 @@ export const Users: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isOtpOpen, setIsOtpOpen] = useState(false);
   const [isRoleUpdateOpen, setIsRoleUpdateOpen] = useState(false);
+  const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
+  const [isAddressUpdateOpen, setIsAddressUpdateOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<number>(Role.User);
   const [tempRegistrationData, setTempRegistrationData] = useState<any>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [addressData, setAddressData] = useState('');
   const [formData, setFormData] = useState<UserFormValues>({
     name: '',
     email: '',
     password: '',
     contact: '',
+    address: '',
   });
   const [otpData, setOtpData] = useState({
     email: '',
@@ -375,6 +383,63 @@ export const Users: React.FC = () => {
     },
   });
 
+  // Image upload mutation
+  const updateImageMutation = useMutation({
+    mutationFn: ({ userId, imageFile }: { userId: number; imageFile: File }) => {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      return apiService.updateUserImage(userId, formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsImageUploadOpen(false);
+      setImageFile(null);
+      setSelectedUser(null);
+      toast({ 
+        title: 'Success', 
+        description: 'User image updated successfully',
+        duration: 3000,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Image update error:', error);
+      const errorMessage = error?.message || 'Failed to update user image';
+      toast({ 
+        title: 'Error updating image', 
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000,
+      });
+    },
+  });
+
+  // Address update mutation
+  const updateAddressMutation = useMutation({
+    mutationFn: ({ userId, address }: { userId: number; address: string }) => 
+      apiService.updateUserAddress(userId, { address }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsAddressUpdateOpen(false);
+      setAddressData('');
+      setSelectedUser(null);
+      toast({ 
+        title: 'Success', 
+        description: 'User address updated successfully',
+        duration: 3000,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Address update error:', error);
+      const errorMessage = error?.message || 'Failed to update user address';
+      toast({ 
+        title: 'Error updating address', 
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000,
+      });
+    },
+  });
+
   // Helper functions
   const resetForm = () => {
     setFormData({
@@ -382,8 +447,10 @@ export const Users: React.FC = () => {
       email: '',
       password: '',
       contact: '',
+      address: '',
     });
     setImageFile(null);
+    setAddressData('');
     setSelectedUser(null);
     setTempRegistrationData(null);
     setOtpData({ email: '', otp: '' });
@@ -399,6 +466,7 @@ export const Users: React.FC = () => {
       email: user.email || '',
       password: '', // Don't populate password for security
       contact: user.phone || user.contact || '',
+      address: user.address || '',
     });
     setIsEditOpen(true);
   };
@@ -451,6 +519,7 @@ export const Users: React.FC = () => {
         name: formData.name,
         email: formData.email,
         contact: formData.contact,
+        ...(formData.address && { address: formData.address }), // Include address if provided
         ...(formData.password && { password: formData.password }) // Only include password if provided
       };
       updateMutation.mutate({ id: userId, userData: updateData });
@@ -510,6 +579,139 @@ export const Users: React.FC = () => {
       toast({
         title: 'Error',
         description: 'Failed to process role update',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleImageUpload = (user: User) => {
+    try {
+      if (!user) {
+        console.error('No user provided to handleImageUpload');
+        return;
+      }
+      
+      const userId = user.id || user.userId;
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'User ID not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSelectedUser(user);
+      setIsImageUploadOpen(true);
+    } catch (error) {
+      console.error('Error in handleImageUpload:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open image upload dialog',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleAddressUpdate = (user: User) => {
+    try {
+      if (!user) {
+        console.error('No user provided to handleAddressUpdate');
+        return;
+      }
+      
+      const userId = user.id || user.userId;
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'User ID not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSelectedUser(user);
+      setAddressData(user.address || '');
+      setIsAddressUpdateOpen(true);
+    } catch (error) {
+      console.error('Error in handleAddressUpdate:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open address update dialog',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleImageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (!selectedUser) {
+        toast({
+          title: 'Error',
+          description: 'No user selected',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const userId = selectedUser.id || selectedUser.userId;
+      if (!userId || !imageFile) {
+        toast({
+          title: 'Error',
+          description: 'User ID not found or no image selected',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Submitting image update:', { userId, imageFile: imageFile.name });
+      updateImageMutation.mutate({ userId, imageFile });
+    } catch (error) {
+      console.error('Error in handleImageSubmit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process image update',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (!selectedUser) {
+        toast({
+          title: 'Error',
+          description: 'No user selected',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const userId = selectedUser.id || selectedUser.userId;
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'User ID not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Submitting address update:', { userId, address: addressData });
+      updateAddressMutation.mutate({ userId, address: addressData });
+    } catch (error) {
+      console.error('Error in handleAddressSubmit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process address update',
         variant: 'destructive',
         duration: 3000,
       });
@@ -694,6 +896,20 @@ export const Users: React.FC = () => {
                       required
                     />
                   </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="address" className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Address
+                    </Label>
+                    <Textarea
+                      id="address"
+                      placeholder="Enter address (optional)"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
                 </div>
                 
                 <DialogFooter>
@@ -857,8 +1073,29 @@ export const Users: React.FC = () => {
                             size="sm"
                             onClick={() => handleEdit(user)}
                             className="hover:bg-blue-50 hover:text-blue-600"
+                            title="Edit User"
                           >
                             <Edit className="w-4 h-4" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleImageUpload(user)}
+                            className="hover:bg-green-50 hover:text-green-600"
+                            title="Update Profile Image"
+                          >
+                            <Camera className="w-4 h-4" />
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddressUpdate(user)}
+                            className="hover:bg-orange-50 hover:text-orange-600"
+                            title="Update Address"
+                          >
+                            <MapPin className="w-4 h-4" />
                           </Button>
 
                           {canUpdateRoles() && (
@@ -1262,10 +1499,176 @@ export const Users: React.FC = () => {
                   required
                 />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-address">Address</Label>
+                <Textarea
+                  id="edit-address"
+                  placeholder="Enter address (optional)"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  rows={3}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? 'Updating...' : 'Update User'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={isImageUploadOpen} onOpenChange={setIsImageUploadOpen}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleImageSubmit}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-green-600" />
+                Update Profile Image
+              </DialogTitle>
+              <DialogDescription>
+                Upload a new profile image for {selectedUser?.name || 'this user'}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              {selectedUser?.imageUrl && (
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200">
+                    <img 
+                      src={`${API_BASE_URL}/${selectedUser.imageUrl}`} 
+                      alt={selectedUser.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid gap-2">
+                <Label htmlFor="image-upload" className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  Select New Image
+                </Label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                    }
+                  }}
+                  required
+                />
+                {imageFile && (
+                  <p className="text-sm text-gray-600">
+                    Selected: {imageFile.name}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsImageUploadOpen(false);
+                  setImageFile(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={updateImageMutation.isPending || !imageFile}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {updateImageMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Image
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Address Update Dialog */}
+      <Dialog open={isAddressUpdateOpen} onOpenChange={setIsAddressUpdateOpen}>
+        <DialogContent className="max-w-md">
+          <form onSubmit={handleAddressSubmit}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-orange-600" />
+                Update Address
+              </DialogTitle>
+              <DialogDescription>
+                Update the address for {selectedUser?.name || 'this user'}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="address-input" className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Address
+                </Label>
+                <Textarea
+                  id="address-input"
+                  placeholder="Enter full address..."
+                  value={addressData}
+                  onChange={(e) => setAddressData(e.target.value)}
+                  rows={4}
+                  required
+                />
+              </div>
+              
+              {selectedUser?.address && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700 mb-1">Current Address:</p>
+                  <p className="text-sm text-gray-600">{selectedUser.address}</p>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsAddressUpdateOpen(false);
+                  setAddressData('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={updateAddressMutation.isPending || !addressData.trim()}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {updateAddressMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Update Address
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>

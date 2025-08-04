@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService as api } from '../services/api';
-import { ProductDTO } from '../types/api';
+import { ProductDTO, SubSubCategoryDTO } from '../types/api';
 import {
   Card,
   CardContent,
@@ -47,6 +47,19 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -62,9 +75,12 @@ import {
   Star,
   Package,
   RotateCcw,
-  AlertTriangle
+  AlertTriangle,
+  Check,
+  ChevronsUpDown
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
+import { cn } from '../lib/utils';
 
 const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,6 +92,8 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductDTO | null>(null);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [goToPage, setGoToPage] = useState('');
+  const [openSubSubCategory, setOpenSubSubCategory] = useState(false);
+  const [openEditSubSubCategory, setOpenEditSubSubCategory] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -103,7 +121,130 @@ const Products = () => {
     placeholderData: (previousData) => previousData
   });
 
+  // Fetch sub-sub-categories for dropdown
+  const { data: subSubCategories, isLoading: subSubCategoriesLoading, error: subSubCategoriesError } = useQuery({
+    queryKey: ['subSubCategories'],
+    queryFn: () => api.getSubSubCategories({ page: 1, pageSize: 100 }),
+    retry: 3,
+    retryDelay: 1000
+  });
+
+  // Fetch subcategories to show parent hierarchy
+  const { data: subCategories } = useQuery({
+    queryKey: ['subcategories-all'],
+    queryFn: () => api.getSubCategories({ page: 1, pageSize: 100 }),
+  });
+
+  // Fetch categories to show full hierarchy
+  const { data: categories } = useQuery({
+    queryKey: ['categories-all'],
+    queryFn: () => api.getCategories({ page: 1, pageSize: 100 }),
+  });
+
   console.log("Products data:", products);
+  console.log("SubSubCategories data:", subSubCategories);
+  console.log("SubSubCategories loading:", subSubCategoriesLoading);
+  console.log("SubSubCategories error:", subSubCategoriesError);
+  console.log("SubSubCategories structure:", {
+    fullResponse: subSubCategories,
+    data: subSubCategories?.data,
+    dataData: subSubCategories?.data?.data,
+    isDataArray: Array.isArray(subSubCategories?.data),
+    isDataDataArray: Array.isArray(subSubCategories?.data?.data)
+  });
+
+  // Handle different possible response structures for sub-subcategories
+  const getSubSubCategoriesArray = () => {
+    if (!subSubCategories) {
+      console.log("No subSubCategories data");
+      return [];
+    }
+    
+    console.log("Processing subSubCategories structure:", subSubCategories);
+    
+    let allCategories = [];
+    
+    // Try different possible structures based on API responses
+    if (Array.isArray(subSubCategories.data)) {
+      console.log("Using subSubCategories.data as array, length:", subSubCategories.data.length);
+      allCategories = subSubCategories.data;
+    } else if (Array.isArray(subSubCategories.data?.data)) {
+      console.log("Using subSubCategories.data.data as array, length:", subSubCategories.data.data.length);
+      allCategories = subSubCategories.data.data;
+    } else if (Array.isArray(subSubCategories)) {
+      console.log("Using subSubCategories directly as array, length:", subSubCategories.length);
+      allCategories = subSubCategories;
+    } else {
+      console.warn("Unexpected sub-subcategories structure, returning empty array:", subSubCategories);
+      return [];
+    }
+
+    console.log("All categories before filtering:", allCategories);
+    
+    // Filter for active categories and add parent hierarchy info
+    const activeCategories = allCategories.filter((cat: SubSubCategoryDTO) => {
+      if (!cat || typeof cat !== 'object') {
+        console.warn("Invalid category object:", cat);
+        return false;
+      }
+      console.log("Category:", cat.name, "isActive:", cat.isActive);
+      // Include all categories that have required fields
+      return cat.subSubCategoryId && cat.name && cat.subCategoryId;
+    }).map((cat: SubSubCategoryDTO) => {
+      // Find parent subcategory
+      const parentSubCategory = getSubCategoriesArray().find((sub: any) => 
+        sub.subCategoryId === cat.subCategoryId || sub.id === cat.subCategoryId
+      );
+      
+      // Find parent category
+      const parentCategory = getCategoriesArray().find((category: any) => 
+        category.categoryId === parentSubCategory?.categoryId || category.id === parentSubCategory?.categoryId
+      );
+
+      return {
+        ...cat,
+        parentSubCategoryName: parentSubCategory?.name || 'Unknown SubCategory',
+        parentCategoryName: parentCategory?.name || 'Unknown Category',
+        fullHierarchy: `${parentCategory?.name || 'Unknown'} > ${parentSubCategory?.name || 'Unknown'} > ${cat.name}`
+      };
+    });
+    
+    console.log("Active categories after filtering and hierarchy processing:", activeCategories);
+    return activeCategories;
+  };
+
+  // Helper function to get subcategories array
+  const getSubCategoriesArray = () => {
+    if (!subCategories) return [];
+    
+    if (Array.isArray(subCategories.data)) {
+      return subCategories.data;
+    } else if (Array.isArray(subCategories.data?.data)) {
+      return subCategories.data.data;
+    } else if (Array.isArray(subCategories)) {
+      return subCategories;
+    }
+    
+    return [];
+  };
+
+  // Helper function to get categories array
+  const getCategoriesArray = () => {
+    if (!categories) return [];
+    
+    if (Array.isArray(categories.data)) {
+      return categories.data;
+    } else if (Array.isArray(categories.data?.data)) {
+      return categories.data.data;
+    } else if (Array.isArray(categories)) {
+      return categories;
+    }
+    
+    return [];
+  };
+
+  const subSubCategoriesArray = getSubSubCategoriesArray();
+  console.log("Final subSubCategoriesArray:", subSubCategoriesArray);
 
   const resetForm = () => {
     setFormData({
@@ -118,6 +259,8 @@ const Products = () => {
       dimensions: '',
       subSubCategoryId: ''
     });
+    setOpenSubSubCategory(false);
+    setOpenEditSubSubCategory(false);
   };
 
   // Create mutation
@@ -397,15 +540,27 @@ const Products = () => {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="subSubCategoryId">Sub-SubCategory ID</Label>
-                    <Input
-                      id="subSubCategoryId"
-                      type="number"
-                      value={formData.subSubCategoryId}
-                      onChange={(e) => setFormData({ ...formData, subSubCategoryId: e.target.value })}
-                      placeholder="Enter SubSubCategory ID"
-                      required
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="subSubCategoryId">Sub-SubCategory</Label>
+                      <Select value={formData.subSubCategoryId} onValueChange={(value)=>setFormData({...formData,subSubCategoryId:value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sub-subcategory" />
+                      </SelectTrigger>
+                        <SelectContent>
+                          {subSubCategories?.data?.data?.map((subSubCategory : any) => (
+                            <SelectItem
+                              key={subSubCategory.id}
+                              value={subSubCategory.id.toString()}
+                            >
+                              {subSubCategory.name}
+                             
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                    </div>                    
+                    
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="weight">Weight</Label>
@@ -545,6 +700,7 @@ const Products = () => {
                 <TableRow>
                   <TableHead className="font-semibold">Image</TableHead>
                   <TableHead className="font-semibold">Product</TableHead>
+                  <TableHead className="font-semibold">Category</TableHead>
                   <TableHead className="font-semibold">SKU</TableHead>
                   <TableHead className="font-semibold">Price</TableHead>
                   <TableHead className="font-semibold">Stock</TableHead>
@@ -823,15 +979,88 @@ const Products = () => {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-subSubCategoryId">Sub-SubCategory ID</Label>
-                <Input
-                  id="edit-subSubCategoryId"
-                  type="number"
-                  value={formData.subSubCategoryId}
-                  onChange={(e) => setFormData({ ...formData, subSubCategoryId: e.target.value })}
-                  placeholder="Enter SubSubCategory ID"
-                  required
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-subSubCategoryId">Sub-SubCategory</Label>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['subSubCategories'] })}
+                    disabled={subSubCategoriesLoading}
+                  >
+                    🔄 Refresh
+                  </Button>
+                </div>
+                <Popover open={openEditSubSubCategory} onOpenChange={setOpenEditSubSubCategory}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openEditSubSubCategory}
+                      className="w-full justify-between h-auto min-h-[40px] text-left"
+                      disabled={subSubCategoriesLoading}
+                    >
+                      <div className="flex flex-col items-start">
+                        {formData.subSubCategoryId
+                          ? (() => {
+                              const selectedCategory = subSubCategoriesArray.find((category) => 
+                                category?.subSubCategoryId?.toString() === formData.subSubCategoryId
+                              );
+                              return selectedCategory ? (
+                                <>
+                                  <span className="font-medium">{selectedCategory.name}</span>
+                                  <span className="text-xs text-gray-500">{selectedCategory.fullHierarchy}</span>
+                                </>
+                              ) : 'Unknown Category';
+                            })()
+                          : subSubCategoriesLoading 
+                            ? "Loading categories..." 
+                            : "Select sub-subcategory..."}
+                      </div>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[500px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search categories..." />
+                      <CommandList>
+                        <CommandEmpty>No categories found.</CommandEmpty>
+                        <CommandGroup>
+                          {subSubCategoriesArray.filter(category => category && category.subSubCategoryId && category.name).map((category) => (
+                            <CommandItem
+                              key={category.subSubCategoryId}
+                              value={`${category.name} ${category.fullHierarchy}`}
+                              onSelect={() => {
+                                setFormData({ ...formData, subSubCategoryId: category.subSubCategoryId.toString() });
+                                setOpenEditSubSubCategory(false);
+                              }}
+                              className="flex flex-col items-start py-3"
+                            >
+                              <div className="flex items-center w-full">
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 shrink-0",
+                                    formData.subSubCategoryId === category.subSubCategoryId.toString() ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{category.name}</span>
+                                  <span className="text-xs text-gray-500">{category.fullHierarchy}</span>
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  {subSubCategoriesArray.length > 0 ? 
+                    `${subSubCategoriesArray.length} active categories available` : 
+                    'Loading categories...'
+                  }
+                </p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-weight">Weight</Label>

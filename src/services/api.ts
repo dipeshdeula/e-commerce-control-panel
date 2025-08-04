@@ -10,6 +10,7 @@ import { PaymentMethodService } from './payment-method-service';
 import { StoreService } from './store-service';
 import { CompanyService } from './company-service';
 import { BillingService } from './billing-service';
+import { BannerEventService } from './banner-event-service';
 import { TransactionService } from './transaction-service';
 import { NotificationService } from './notification-service';
 import { SubCategoryService } from './subCategory-service';
@@ -29,6 +30,7 @@ class ApiService extends BaseApiService {
   private storeService = new StoreService();
   private companyService = new CompanyService();
   private billingService = new BillingService();
+  private bannerEventService = new BannerEventService();
   private transactionService = new TransactionService();
   private notificationService = new NotificationService();
 
@@ -48,6 +50,8 @@ class ApiService extends BaseApiService {
   //updateUserRole = this.userService.updateUserRole.bind(this.userService);
   updateUser = this.userService.updateUser.bind(this.userService);
   updateUserRole = this.userService.updateUserRole.bind(this.userService);
+  updateUserImage = this.userService.updateUserImage.bind(this.userService);
+  updateUserAddress = this.userService.updateUserAddress.bind(this.userService);
   //uploadUserImage = this.userService.uploadUserImage.bind(this.userService);
   softDeleteUser = this.userService.softDeleteUser.bind(this.userService);
   hardDeleteUser = this.userService.hardDeleteUser.bind(this.userService);
@@ -144,16 +148,36 @@ class ApiService extends BaseApiService {
 
   // Company Info Management
   getAllCompanyInfo = this.companyService.getAllCompanyInfo.bind(this.companyService);
+  getCompanyInfoById = this.companyService.getCompanyInfoById.bind(this.companyService);
   createCompanyInfo = this.companyService.createCompanyInfo.bind(this.companyService);
   updateCompanyInfo = this.companyService.updateCompanyInfo.bind(this.companyService);
   uploadCompanyLogo = this.companyService.uploadCompanyLogo.bind(this.companyService);
+  softDeleteCompanyInfo = this.companyService.softDeleteCompanyInfo.bind(this.companyService);
+  unDeleteCompanyInfo = this.companyService.unDeleteCompanyInfo.bind(this.companyService);
   hardDeleteCompanyInfo = this.companyService.hardDeleteCompanyInfo.bind(this.companyService);
 
   // Billing Management
-  getBillings = this.billingService.getBillings.bind(this.billingService);
-  createBilling = this.billingService.createBilling.bind(this.billingService);
-  updateBilling = this.billingService.updateBilling.bind(this.billingService);
-  deleteBilling = this.billingService.deleteBilling.bind(this.billingService);
+  getAllBills = this.billingService.getAllBills.bind(this.billingService);
+  getAllBillItems = this.billingService.getAllBillItems.bind(this.billingService);
+  getBillByUserId = this.billingService.getBillByUserId.bind(this.billingService);
+  softDeleteBill = this.billingService.softDeleteBill.bind(this.billingService);
+  unDeleteBill = this.billingService.unDeleteBill.bind(this.billingService);
+  hardDeleteBill = this.billingService.hardDeleteBill.bind(this.billingService);
+
+  // Banner Event Management
+  getAllBannerEvents = this.bannerEventService.getAllBannerEvents.bind(this.bannerEventService);
+  getBannerEventById = this.bannerEventService.getBannerEventById.bind(this.bannerEventService);
+  createBannerEvent = this.bannerEventService.createBannerEvent.bind(this.bannerEventService);
+  uploadBannerImages = this.bannerEventService.uploadBannerImages.bind(this.bannerEventService);
+  activateOrDeactivateBannerEvent = this.bannerEventService.activateOrDeactivateBannerEvent.bind(this.bannerEventService);
+  softDeleteBannerEvent = this.bannerEventService.softDeleteBannerEvent.bind(this.bannerEventService);
+  unDeleteBannerEvent = this.bannerEventService.unDeleteBannerEvent.bind(this.bannerEventService);
+  hardDeleteBannerEvent = this.bannerEventService.hardDeleteBannerEvent.bind(this.bannerEventService);
+  getEventAnalytics = this.bannerEventService.getEventAnalytics.bind(this.bannerEventService);
+  getTopPerformingEvents = this.bannerEventService.getTopPerformingEvents.bind(this.bannerEventService);
+  getDiscountSummary = this.bannerEventService.getDiscountSummary.bind(this.bannerEventService);
+  getRealTimeData = this.bannerEventService.getRealTimeData.bind(this.bannerEventService);
+  getRuleReport = this.bannerEventService.getRuleReport.bind(this.bannerEventService);
 
   // Transaction Management (Payment Requests)
   getTransactions = this.transactionService.getTransactions.bind(this.transactionService);
