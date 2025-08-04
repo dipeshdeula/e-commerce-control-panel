@@ -1,9 +1,8 @@
 import { BaseApiService } from '@/shared/services/base-api';
 
 export enum PaymentMethodType {
-  Esewa = 1,
-  Khalti = 2,
-  COD = 3
+  DigitalPayments = 1,
+  COD = 2
 }
 
 export interface PaymentMethodDTO {
@@ -12,6 +11,9 @@ export interface PaymentMethodDTO {
   type: PaymentMethodType;
   logo: string;
   paymentRequests?: any[];
+  isActive : boolean;
+  supportedCurrencies?:string;
+  requiresRedirect : boolean;
   isDeleted?: boolean;
 }
 
@@ -60,14 +62,16 @@ export class PaymentMethodService extends BaseApiService {
     const response = await fetch(url, {
       headers: this.getAuthHeaders()
     });
+
+    console.log("pament method response", response);
     
     return this.handleResponse<PaymentMethodDTO[]>(response);
   }
 
   async updatePaymentMethod(id: number, data: UpdatePaymentMethodRequest) {
     const formData = new FormData();
-    
-    if (data.name) formData.append('Name', data.name);
+
+    if (data.name) formData.append('ProviderName', data.name);
     if (data.type) formData.append('Type', data.type.toString());
     if (data.file) formData.append('File', data.file);
 

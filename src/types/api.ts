@@ -402,9 +402,8 @@ export interface PaymentMethodListResponse {
 
 // Updated Payment Method types for new API
 export enum PaymentMethodType {
-  Esewa = 1,
-  Khalti = 2,
-  COD = 3
+  DigitalPayments = 1,
+  COD = 2
 }
 
 export interface NewPaymentMethodDTO {

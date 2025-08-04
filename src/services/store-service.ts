@@ -17,6 +17,8 @@ export class StoreService extends BaseApiService {
       headers : this.getAuthHeaders() 
     });
 
+    console.log("store:", response);
+
     const result = await this.handleResponse<StoreDTO[]>(response);
     if(!result.success)
     {

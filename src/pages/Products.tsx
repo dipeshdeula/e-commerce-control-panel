@@ -81,6 +81,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
+import { API_BASE_URL } from '@/config/api.config';
 
 const Products = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -406,6 +407,8 @@ const Products = () => {
       dimensions: formData.dimensions,
     };
 
+    
+
     if (selectedProduct) {
       updateMutation.mutate({ id: selectedProduct.id, data: productData });
     } else {
@@ -690,7 +693,8 @@ const Products = () => {
             Products
           </CardTitle>
           <CardDescription>
-            Manage your product inventory
+            Manage your product inventory<br/>
+            <span className="text-sm text-gray-500">MP: Market Price<br />DP: Discount Price</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -715,7 +719,7 @@ const Products = () => {
                   <TableCell>
                     {product.images && product.images.length > 0 ? (
                       <img 
-                        src={product.images[0].imageUrl} 
+                        src={`${API_BASE_URL}/${product.images[0].imageUrl}`} 
                         alt={product.name}
                         className="w-12 h-12 object-cover rounded"
                       />
@@ -725,6 +729,7 @@ const Products = () => {
                       </div>
                     )}
                   </TableCell>
+                   
                   <TableCell>
                     <div>
                       <div className="font-medium">{product.name}</div>
@@ -733,14 +738,23 @@ const Products = () => {
                       )}
                     </div>
                   </TableCell>
+
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">null</div>                      
+                    </div>
+                  </TableCell>
+
+
                   <TableCell>
                     <code className="text-sm bg-gray-100 px-2 py-1 rounded">{product.sku}</code>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">${product.marketPrice}</div>
+                      <div className="text-sm font-medium"> MP: Rs.{product.marketPrice}</div>
+                       <div className="text-smfont-medium text-gray-600"> CP: Rs.{product.costPrice}</div>
                       {product.discountPrice > 0 && (
-                        <div className="text-sm text-green-600">${product.discountPrice}</div>
+                        <div className="text-sm font-medium text-green-600">DP: Rs.{product.discountPrice}</div>
                       )}
                     </div>
                   </TableCell>

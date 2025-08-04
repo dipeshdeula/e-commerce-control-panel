@@ -16,6 +16,7 @@ export class PaymentService extends BaseApiService {
       headers : this.getAuthHeaders()
     });
 
+    console.log("pament method response",response);
     const result = await this.handleResponse<PaymentMethodDTO[]>(response);
 
     if(!result.success) {

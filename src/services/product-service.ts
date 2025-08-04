@@ -18,6 +18,7 @@ export class ProductService extends BaseApiService {
     const response = await fetch(url, {
       headers: this.getAuthHeaders()
     });
+    console.log("product:", response);
     const result = await this.handleResponse<ProductDTO[]>(response);
     if (!result.success) {
       throw new Error(result.message || 'Failed to fetch products');

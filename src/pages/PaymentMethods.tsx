@@ -48,7 +48,7 @@ export const PaymentMethods: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    type: PaymentMethodType.Esewa,
+    type: PaymentMethodType.DigitalPayments,
   });
 
   const { toast } = useToast();
@@ -59,6 +59,7 @@ export const PaymentMethods: React.FC = () => {
     queryKey: ['paymentMethods'],
     queryFn: async () => {
       const response = await apiService.getAllPaymentMethods();
+      console.log("Payment methods response:", response);
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch payment methods');
       }
@@ -163,7 +164,7 @@ export const PaymentMethods: React.FC = () => {
   const resetForm = () => {
     setFormData({
       name: '',
-      type: PaymentMethodType.Esewa,
+      type: PaymentMethodType.DigitalPayments,
     });
     setSelectedFile(null);
     setSelectedPaymentMethod(null);
@@ -204,6 +205,8 @@ export const PaymentMethods: React.FC = () => {
     if (Array.isArray(paymentMethods.data.data)) {
       return paymentMethods.data.data;
     }
+
+    console.log("Unexpected payment methods structure:", paymentMethods.data.data);
     
     return [];
   };
@@ -212,14 +215,16 @@ export const PaymentMethods: React.FC = () => {
   const activeCount = paymentMethodsArray.filter((pm: any) => !pm.isDeleted).length;
   const deletedCount = paymentMethodsArray.filter((pm: any) => pm.isDeleted).length;
 
+  console.log("payment method array",paymentMethodsArray);
   const filteredPaymentMethods = paymentMethodsArray.filter((paymentMethod: any) =>
-    paymentMethod.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    paymentMethod.providerName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  console.log("Filtered payment methods:", filteredPaymentMethods);
 
   const getPaymentTypeLabel = (type: number) => {
     switch (type) {
-      case PaymentMethodType.Esewa: return 'eSewa';
-      case PaymentMethodType.Khalti: return 'Khalti';
+      case PaymentMethodType.DigitalPayments: return 'Digital Payments';
       case PaymentMethodType.COD: return 'Cash on Delivery';
       default: return 'Unknown';
     }
@@ -227,8 +232,7 @@ export const PaymentMethods: React.FC = () => {
 
   const getPaymentTypeColor = (type: number) => {
     switch (type) {
-      case PaymentMethodType.Esewa: return 'bg-green-100 text-green-700';
-      case PaymentMethodType.Khalti: return 'bg-purple-100 text-purple-700';
+      case PaymentMethodType.DigitalPayments: return 'bg-green-100 text-green-700';      
       case PaymentMethodType.COD: return 'bg-blue-100 text-blue-700';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -281,8 +285,7 @@ export const PaymentMethods: React.FC = () => {
                         <SelectValue placeholder="Select payment type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={PaymentMethodType.Esewa.toString()}>eSewa</SelectItem>
-                        <SelectItem value={PaymentMethodType.Khalti.toString()}>Khalti</SelectItem>
+                        <SelectItem value={PaymentMethodType.DigitalPayments.toString()}>Digital Payments</SelectItem>
                         <SelectItem value={PaymentMethodType.COD.toString()}>Cash on Delivery</SelectItem>
                       </SelectContent>
                     </Select>
@@ -353,7 +356,7 @@ export const PaymentMethods: React.FC = () => {
                       {paymentMethod.logo ? (
                         <img
                           src={paymentMethod.logo.startsWith('http') ? paymentMethod.logo : `${BASE_URL}/${paymentMethod.logo}`}
-                          alt={paymentMethod.name}
+                          alt={paymentMethod.providerName}
                           className="w-12 h-12 rounded object-cover"
                         />
                       ) : (
@@ -364,7 +367,7 @@ export const PaymentMethods: React.FC = () => {
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center space-x-2">
-                        <span>{paymentMethod.name}</span>
+                        <span>{paymentMethod.providerName}</span>
                         {paymentMethod.isDeleted && (
                           <Badge variant="secondary" className="bg-red-100 text-red-700 text-xs">
                             Deleted
@@ -490,8 +493,7 @@ export const PaymentMethods: React.FC = () => {
                       <SelectValue placeholder="Select payment type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={PaymentMethodType.Esewa.toString()}>eSewa</SelectItem>
-                      <SelectItem value={PaymentMethodType.Khalti.toString()}>Khalti</SelectItem>
+                      <SelectItem value={PaymentMethodType.DigitalPayments.toString()}>Digital Payments</SelectItem>
                       <SelectItem value={PaymentMethodType.COD.toString()}>Cash on Delivery</SelectItem>
                     </SelectContent>
                   </Select>
