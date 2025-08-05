@@ -504,6 +504,7 @@ export const PaymentMethods: React.FC = () => {
                     id="edit-logo"
                     type="file"
                     accept="image/*"
+                    
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   />
                 </div>

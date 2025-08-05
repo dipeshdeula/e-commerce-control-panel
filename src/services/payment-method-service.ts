@@ -71,7 +71,7 @@ export class PaymentMethodService extends BaseApiService {
   async updatePaymentMethod(id: number, data: UpdatePaymentMethodRequest) {
     const formData = new FormData();
 
-    if (data.name) formData.append('ProviderName', data.name);
+    if (data.name) formData.append('Name', data.name);
     if (data.type) formData.append('Type', data.type.toString());
     if (data.file) formData.append('File', data.file);
 
@@ -80,6 +80,8 @@ export class PaymentMethodService extends BaseApiService {
       headers: this.getFormHeaders(), // multipart form data
       body: formData
     });
+
+    console.log("update payment method response", response);
     
     return this.handleResponse<PaymentMethodDTO>(response);
   }
