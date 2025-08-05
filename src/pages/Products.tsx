@@ -702,6 +702,7 @@ const Products = () => {
             <Table>
               <TableHeader className="bg-gray-50">
                 <TableRow>
+                  <TableHead className="font-semibold">Id</TableHead>
                   <TableHead className="font-semibold">Image</TableHead>
                   <TableHead className="font-semibold">Product</TableHead>
                   <TableHead className="font-semibold">Category</TableHead>
@@ -716,6 +717,12 @@ const Products = () => {
             <TableBody>
               {paginatedProducts.map((product) => (
                 <TableRow key={product.id} className={product.isDeleted ? 'opacity-60 bg-red-50' : ''}>
+                   <TableCell>
+                    <div>
+                      <div className="font-medium">#{product.id}</div>                     
+                    </div>
+                  </TableCell>
+
                   <TableCell>
                     {product.images && product.images.length > 0 ? (
                       <img 
