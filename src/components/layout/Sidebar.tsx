@@ -25,7 +25,8 @@ import {
   ShieldCheck,
   Receipt,
   Zap,
-  Calendar
+  Calendar,
+  Truck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ const navigation = [
     ]
   },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
+  { name: 'Delivery Management', href: '/delivery-management', icon: Truck },
   {
     name: 'Store Management',
     icon: Store,

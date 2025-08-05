@@ -21,6 +21,7 @@ import { PaymentMethods } from "@/pages/PaymentMethods";
 import { PaymentRequests } from "@/pages/PaymentRequests";
 import { Billing } from "@/pages/Billing";
 import BannerEvents from "@/pages/BannerEvents";
+import DeliveryManagement from "@/pages/DeliveryManagement";
 import { Settings } from "@/pages/Settings";
 import { Notifications } from "@/pages/Notifications";
 import { CompanyInfo } from "@/pages/CompanyInfo";
@@ -151,6 +152,16 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <Orders />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/delivery-management"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <DeliveryManagement />
             </Layout>
           </ProtectedRoute>
         }

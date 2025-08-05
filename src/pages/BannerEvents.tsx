@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar, CalendarIcon, Clock, Tag, Percent, DollarSign, Eye, Edit, Trash2, Play, Pause, Upload, BarChart3, Plus, Filter, Search, RefreshCw, Settings, Users, TrendingUp, Target, Calendar as CalendarIcon2, Zap, Gift, Star, Globe, CreditCard, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ import { BannerEvent, CreateBannerEventDTO, BannerEventRule } from '@/services/b
 import BannerEventAnalytics from '@/components/banner-events/BannerEventAnalytics';
 import { ProductPricingAnalysis } from '@/components/banner-events/ProductPricingAnalysis';
 import { BannerImageUpload } from '@/components/banner-events/BannerImageUpload';
+import { BannerEventTester } from '@/components/banner-events/BannerEventTester';
 
 // Enum mappings
 const EventStatus = {
@@ -35,11 +37,10 @@ const EventStatus = {
 const EventType = {
   0: 'Seasonal',
   1: 'Festive', 
-  2: 'Occasional',
-  3: 'Flash',
-  4: 'Clearance',
-  5: 'NewArrival',
-  6: 'Loyalty'
+  2: 'Flash',
+  3: 'Clearance',
+  4: 'Launch',
+  5: 'Loyalty'
 };
 
 const PromotionType = {
@@ -55,12 +56,10 @@ const RuleType = {
   1: 'SubCategory',
   2: 'SubSubCategory',
   3: 'Product',
-  4: 'Brand',
-  5: 'PriceRange',
-  6: 'UserType',
-  7: 'Geography',
-  8: 'PaymentMethod',
-  9: 'All'
+  4: 'PriceRange',
+  5: 'Geography',
+  6: 'PaymentMethod',
+  7: 'All'
 };
 
 const getStatusBadgeVariant = (status: number) => {
@@ -79,11 +78,10 @@ const getEventTypeIcon = (eventType: number) => {
   switch (eventType) {
     case 0: return <Calendar className="h-4 w-4" />; // Seasonal
     case 1: return <Star className="h-4 w-4" />; // Festive
-    case 2: return <Gift className="h-4 w-4" />; // Occasional
-    case 3: return <Zap className="h-4 w-4" />; // Flash
-    case 4: return <Package className="h-4 w-4" />; // Clearance
-    case 5: return <TrendingUp className="h-4 w-4" />; // NewArrival
-    case 6: return <Users className="h-4 w-4" />; // Loyalty
+    case 2: return <Zap className="h-4 w-4" />; // Flash
+    case 3: return <Package className="h-4 w-4" />; // Clearance
+    case 4: return <TrendingUp className="h-4 w-4" />; // Launch
+    case 5: return <Users className="h-4 w-4" />; // Loyalty
     default: return <Tag className="h-4 w-4" />;
   }
 };
@@ -474,7 +472,10 @@ const EventDetailsDialog: React.FC<{ event: BannerEvent; isOpen: boolean; onClos
 
           {activeTab === 'pricing' && (
             <div className="mt-6">
-              <ProductPricingAnalysis event={event} />
+              <ProductPricingAnalysis 
+                products={event.eventProducts || []} 
+                eventName={event.name}
+              />
             </div>
           )}
 
@@ -572,7 +573,8 @@ const CreateEventDialog: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
 
   const createEventMutation = useMutation({
     mutationFn: (data: CreateBannerEventDTO) => apiService.createBannerEvent(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('Create event success:', response);
       toast.success('Banner event created successfully!');
       queryClient.invalidateQueries({ queryKey: ['bannerEvents'] });
       onClose();
@@ -605,8 +607,10 @@ const CreateEventDialog: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
       }]);
       setProductIds('');
     },
-    onError: () => {
-      toast.error('Failed to create banner event');
+    onError: (error: any) => {
+      console.error('Create event error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create banner event';
+      toast.error(`Failed to create banner event: ${errorMessage}`);
     }
   });
 
@@ -615,12 +619,24 @@ const CreateEventDialog: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
     
     const productIdArray = productIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
     
+    // Format dates to match API expected format
+    const formatDateForAPI = (dateString: string) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toISOString().slice(0, 19); // Remove milliseconds and Z
+    };
+    
     const createData: CreateBannerEventDTO = {
-      eventDto: eventData,
+      eventDto: {
+        ...eventData,
+        startDateNepal: formatDateForAPI(eventData.startDateNepal),
+        endDateNepal: formatDateForAPI(eventData.endDateNepal)
+      },
       rules: rules,
       productIds: productIdArray
     };
 
+    console.log('Submitting banner event data:', createData);
     createEventMutation.mutate(createData);
   };
 
@@ -980,60 +996,86 @@ const BannerEvents: React.FC = () => {
     })
   });
 
+  console.log("eventsData with filter:", eventsData);
+
   // Mutations
   const activateDeactivateMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => 
       apiService.activateOrDeactivateBannerEvent(id, isActive),
-    onSuccess: () => {
-      toast.success('Event status updated successfully!');
+    onSuccess: (response, variables) => {
+      console.log('Toggle active success:', response);
+      toast.success(`Event ${variables.isActive ? 'activated' : 'deactivated'} successfully!`);
       queryClient.invalidateQueries({ queryKey: ['bannerEvents'] });
     },
-    onError: () => {
-      toast.error('Failed to update event status');
+    onError: (error: any) => {
+      console.error('Toggle active error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update event status';
+      toast.error(`Failed to update event status: ${errorMessage}`);
     }
   });
 
   const softDeleteMutation = useMutation({
     mutationFn: (id: number) => apiService.softDeleteBannerEvent(id),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('Soft delete success:', response);
       toast.success('Event deleted successfully! You can restore it later.');
       queryClient.invalidateQueries({ queryKey: ['bannerEvents'] });
     },
-    onError: () => {
-      toast.error('Failed to delete event');
+    onError: (error: any) => {
+      console.error('Soft delete error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to delete event';
+      toast.error(`Failed to delete event: ${errorMessage}`);
     }
   });
 
   const unDeleteMutation = useMutation({
     mutationFn: (id: number) => apiService.unDeleteBannerEvent(id),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('Undelete success:', response);
       toast.success('Event restored successfully!');
       queryClient.invalidateQueries({ queryKey: ['bannerEvents'] });
     },
-    onError: () => {
-      toast.error('Failed to restore event');
+    onError: (error: any) => {
+      console.error('Undelete error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to restore event';
+      toast.error(`Failed to restore event: ${errorMessage}`);
     }
   });
 
   const hardDeleteMutation = useMutation({
     mutationFn: (id: number) => apiService.hardDeleteBannerEvent(id),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log('Hard delete success:', response);
       toast.success('Event permanently deleted!');
       queryClient.invalidateQueries({ queryKey: ['bannerEvents'] });
     },
-    onError: () => {
-      toast.error('Failed to permanently delete event');
+    onError: (error: any) => {
+      console.error('Hard delete error:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to permanently delete event';
+      toast.error(`Failed to permanently delete event: ${errorMessage}`);
     }
   });
 
   // Filter events based on search term
-  const filteredEvents = Array.isArray(eventsData?.data?.data) 
-    ? eventsData.data.data.filter(event =>
-        event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.tagLine?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEvents = Array.isArray(eventsData?.data?.data?.data) 
+    ? eventsData.data.data.data.filter(event =>
+        (event.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.tagLine || '').toLowerCase().includes(searchTerm.toLowerCase())
       ) 
     : [];
+    console.log("eventsData:", eventsData);
+    console.log("filetered events:",filteredEvents);
+    
+    // Debug the first event's date fields
+    if (filteredEvents.length > 0) {
+      console.log("First event date fields:", {
+        startDate: filteredEvents[0].startDate,
+        endDate: filteredEvents[0].endDate,
+        startDateNepal: filteredEvents[0].startDateNepal,
+        endDateNepal: filteredEvents[0].endDateNepal
+      });
+    }
 
   const handleToggleActive = (event: BannerEvent) => {
     activateDeactivateMutation.mutate({ id: event.id, isActive: !event.isActive });
@@ -1071,18 +1113,32 @@ const BannerEvents: React.FC = () => {
     return (
       <div className="container mx-auto px-6 py-8">
         <div className="text-center py-12">
-          <div className="text-red-500 text-xl mb-4">Error loading banner events</div>
+          <div className="text-red-500 text-xl mb-4">⚠️ Error loading banner events</div>
           <div className="text-gray-600 mb-4">
             {error instanceof Error ? error.message : 'An unexpected error occurred'}
           </div>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ['bannerEvents'] })}
+                variant="outline"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Retry loading banner events</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <TooltipProvider>
+      <div className="container mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -1090,17 +1146,32 @@ const BannerEvents: React.FC = () => {
           <p className="text-muted-foreground">Manage promotional banner events and campaigns</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant={activeTab === 'analytics' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('analytics')}
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Analytics
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Event
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant={activeTab === 'analytics' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('analytics')}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analytics
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View analytics and reports</p>
+            </TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Create a new banner event</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -1118,6 +1189,7 @@ const BannerEvents: React.FC = () => {
         >
           Analytics & Reports
         </button>
+        
       </div>
 
       {/* Tab Content */}
@@ -1162,14 +1234,21 @@ const BannerEvents: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => {
-              setSearchTerm('');
-              setStatusFilter('all-statuses');
-              setEventTypeFilter('all-types');
-            }}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Clear
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all-statuses');
+                  setEventTypeFilter('all-types');
+                }}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Clear all filters</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </CardContent>
       </Card>
@@ -1178,12 +1257,19 @@ const BannerEvents: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Events ({eventsData?.data?.totalCount || 0})</CardTitle>
+            <CardTitle>Events ({filteredEvents?.length || 0})</CardTitle>
             {selectedEvents.length > 0 && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  Bulk Actions ({selectedEvents.length})
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Bulk Actions ({selectedEvents.length})
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Perform actions on {selectedEvents.length} selected events</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             )}
           </div>
@@ -1191,7 +1277,32 @@ const BannerEvents: React.FC = () => {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading banner events...</p>
+              </div>
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground mb-4">
+                {searchTerm || statusFilter !== 'all-statuses' || eventTypeFilter !== 'all-types' 
+                  ? 'No events match your search criteria' 
+                  : 'No banner events found'
+                }
+              </div>
+              {!searchTerm && statusFilter === 'all-statuses' && eventTypeFilter === 'all-types' && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => setShowCreateDialog(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Event
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Get started by creating your first banner event</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           ) : (
             <div className="border rounded-lg">
@@ -1218,162 +1329,261 @@ const BannerEvents: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={selectedEvents.includes(event.id)}
-                          onChange={() => handleSelectEvent(event.id)}
-                          className="rounded"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium flex items-center gap-2">
-                            {getEventTypeIcon(event.eventType)}
-                            {event.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{event.tagLine}</div>
-                          <div className="text-xs text-muted-foreground max-w-xs truncate">
-                            {event.description}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{EventType[event.eventType as keyof typeof EventType]}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge variant={getStatusBadgeVariant(event.status)}>{event.statusBadge}</Badge>
-                          <div className="text-xs text-muted-foreground">{event.timeStatus}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium text-green-600">{event.formattedDiscount}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Max: Rs.{event.maxDiscountAmount}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-2">
-                          <Progress value={event.usagePercentage} className="h-2" />
-                          <div className="text-xs text-muted-foreground">
-                            {event.currentUsageCount} / {event.maxUsageCount}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-xs space-y-1">
-                          <div>{event.formattedDateRangeNepal}</div>
-                          <div className="text-muted-foreground">{event.daysRemaining} days left</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge variant="secondary">{event.totalProductsCount} products</Badge>
-                          <div className="text-xs text-muted-foreground">
-                            {event.eventProducts ? 
-                              `${event.eventProducts.filter(p => p.isOnSale).length} on sale` :
-                              'Loading...'
-                            }
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-right">
-                          {event.eventProducts ? (
-                            <>
-                              <div className="font-medium text-green-600">
-                                Rs.{event.eventProducts.reduce((sum, p) => sum + (p.totalSavingsAmount || 0), 0).toLocaleString()}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Total customer savings
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">Calculating...</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedEvent(event)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowImageUpload(event)}
-                            title="Upload images"
-                          >
-                            <Upload className="h-4 w-4" />
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleActive(event)}
-                            disabled={activateDeactivateMutation.isPending}
-                          >
-                            {event.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                          </Button>
+                  {filteredEvents.map((event) => {
+                    // Helper functions for formatting
+                    const formatDiscount = () => {
+                      if (event.promotionType === 0) { // Percentage
+                        return `${event.discountValue}%`;
+                      } else if (event.promotionType === 1) { // Fixed Amount
+                        return `Rs.${event.discountValue}`;
+                      }
+                      return `${PromotionType[event.promotionType as keyof typeof PromotionType]}`;
+                    };
 
-                          {event.isDeleted ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRestore(event.id)}
-                              disabled={unDeleteMutation.isPending}
-                              title="Restore event"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <Trash2 className="h-4 w-4" />
+                    const formatDateRange = () => {
+                      try {
+                        if (!event.startDate || !event.endDate) {
+                          return 'No dates set';
+                        }
+                        
+                        const startDate = new Date(event.startDate);
+                        const endDate = new Date(event.endDate);
+                        
+                        // Check if dates are valid
+                        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                          return 'Invalid dates';
+                        }
+                        
+                        return `${format(startDate, 'MMM dd, yyyy')} - ${format(endDate, 'MMM dd, yyyy')}`;
+                      } catch (error) {
+                        console.error('Date formatting error:', error, 'Start:', event.startDate, 'End:', event.endDate);
+                        return 'Date format error';
+                      }
+                    };
+
+                    const calculateDaysRemaining = () => {
+                      try {
+                        if (!event.endDate) {
+                          return 0;
+                        }
+                        
+                        const endDate = new Date(event.endDate);
+                        
+                        // Check if date is valid
+                        if (isNaN(endDate.getTime())) {
+                          return 0;
+                        }
+                        
+                        const today = new Date();
+                        const timeDiff = endDate.getTime() - today.getTime();
+                        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                        return daysDiff > 0 ? daysDiff : 0;
+                      } catch (error) {
+                        console.error('Days calculation error:', error, 'End date:', event.endDate);
+                        return 0;
+                      }
+                    };
+
+                    const getStatusText = () => {
+                      return EventStatus[event.status as keyof typeof EventStatus] || 'Unknown';
+                    };
+
+                    const calculateUsagePercentage = () => {
+                      if (!event.maxUsageCount || event.maxUsageCount === 0) return 0;
+                      return Math.round((event.currentUsageCount / event.maxUsageCount) * 100);
+                    };
+
+                    return (
+                      <TableRow key={event.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedEvents.includes(event.id)}
+                            onChange={() => handleSelectEvent(event.id)}
+                            className="rounded"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium flex items-center gap-2">
+                              {getEventTypeIcon(event.eventType)}
+                              {event.name || 'Unnamed Event'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">{event.tagLine || ''}</div>
+                            <div className="text-xs text-muted-foreground max-w-xs truncate">
+                              {event.description || ''}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {EventType[event.eventType as keyof typeof EventType] || 'Unknown'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Badge variant={getStatusBadgeVariant(event.status)}>
+                              {getStatusText()}
+                            </Badge>
+                            <div className="text-xs text-muted-foreground">
+                              {event.isActive ? 'Active' : 'Inactive'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium text-green-600">{formatDiscount()}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Max: Rs.{event.maxDiscountAmount || 0}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <Progress value={calculateUsagePercentage()} className="h-2" />
+                            <div className="text-xs text-muted-foreground">
+                              {event.currentUsageCount || 0} / {event.maxUsageCount || 0}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            <div>{formatDateRange()}</div>
+                            <div className="text-muted-foreground">
+                              {calculateDaysRemaining()} days left
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Badge variant="secondary">
+                              {event.productIds?.length || 0} products
+                            </Badge>
+                            <div className="text-xs text-muted-foreground">
+                              {event.isActive ? 'Currently active' : 'Inactive'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-right">
+                            <div className="font-medium text-green-600">
+                              Rs.{(event.totalSavings || 0).toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Estimated savings
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedEvent(event)}
+                                >
+                                  <Eye className="h-4 w-4" />
                                 </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Event</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Do you want to soft delete (can be restored) or permanently delete this event?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>View event details</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowImageUpload(event)}
+                                >
+                                  <Upload className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Upload banner images</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleToggleActive(event)}
+                                  disabled={activateDeactivateMutation.isPending}
+                                >
+                                  {event.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{event.isActive ? 'Deactivate event' : 'Activate event'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {event.isDeleted ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
                                   <Button
-                                    variant="outline"
-                                    onClick={() => handleSoftDelete(event.id)}
-                                    disabled={softDeleteMutation.isPending}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRestore(event.id)}
+                                    disabled={unDeleteMutation.isPending}
                                   >
-                                    Soft Delete
+                                    <RefreshCw className="h-4 w-4" />
                                   </Button>
-                                  <AlertDialogAction
-                                    onClick={() => handleHardDelete(event.id)}
-                                    disabled={hardDeleteMutation.isPending}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Permanent Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Restore deleted event</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <AlertDialog>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Delete event</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Do you want to soft delete (can be restored) or permanently delete this event?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => handleSoftDelete(event.id)}
+                                      disabled={softDeleteMutation.isPending}
+                                    >
+                                      Soft Delete
+                                    </Button>
+                                    <AlertDialogAction
+                                      onClick={() => handleHardDelete(event.id)}
+                                      disabled={hardDeleteMutation.isPending}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Permanent Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -1383,25 +1593,39 @@ const BannerEvents: React.FC = () => {
           {eventsData?.data && eventsData.data.totalPages > 1 && (
             <div className="flex justify-between items-center mt-4">
               <div className="text-sm text-muted-foreground">
-                Page {eventsData.data.pageNumber} of {eventsData.data.totalPages} ({eventsData.data.totalCount} total events)
+                Page {eventsData.data.pageNumber} of {eventsData.data.totalPages} ({eventsData.data.data?.length || 0} events shown, {eventsData.data.totalCount} total)
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={!eventsData.data.hasPreviousPage}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  disabled={!eventsData.data.hasNextPage}
-                >
-                  Next
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={!eventsData.data.hasPreviousPage}
+                    >
+                      Previous
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Go to previous page</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      disabled={!eventsData.data.hasNextPage}
+                    >
+                      Next
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Go to next page</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
           )}
@@ -1435,7 +1659,8 @@ const BannerEvents: React.FC = () => {
           onClose={() => setShowImageUpload(null)}
         />
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 

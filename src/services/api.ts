@@ -15,6 +15,7 @@ import { TransactionService } from './transaction-service';
 import { NotificationService } from './notification-service';
 import { SubCategoryService } from './subCategory-service';
 import { SubSubCategoryService } from './subSubCategory-service';
+import { DeliveryService } from './delivery-service';
 
 class ApiService extends BaseApiService {
   private authService = new AuthService();
@@ -33,6 +34,7 @@ class ApiService extends BaseApiService {
   private bannerEventService = new BannerEventService();
   private transactionService = new TransactionService();
   private notificationService = new NotificationService();
+  private deliveryService = new DeliveryService();
 
   // Auth methods
   login = this.authService.login.bind(this.authService);
@@ -188,6 +190,17 @@ class ApiService extends BaseApiService {
   softDeletePaymentRequest = this.transactionService.softDeletePaymentRequest.bind(this.transactionService);
   unDeletePaymentRequest = this.transactionService.unDeletePaymentRequest.bind(this.transactionService);
   hardDeletePaymentRequest = this.transactionService.hardDeletePaymentRequest.bind(this.transactionService);
+
+  // Delivery Management
+  markOrderAsDelivered = this.deliveryService.markOrderAsDelivered.bind(this.deliveryService);
+  collectCODPayment = this.deliveryService.collectCODPayment.bind(this.deliveryService);
+  getPendingDeliveries = this.deliveryService.getPendingDeliveries.bind(this.deliveryService);
+  getCompletedDeliveries = this.deliveryService.getCompletedDeliveries.bind(this.deliveryService);
+  getDeliveryStats = this.deliveryService.getDeliveryStats.bind(this.deliveryService);
+  getDeliveryPersons = this.deliveryService.getDeliveryPersons.bind(this.deliveryService);
+  updateDeliveryStatus = this.deliveryService.updateDeliveryStatus.bind(this.deliveryService);
+  assignDelivery = this.deliveryService.assignDelivery.bind(this.deliveryService);
+  getDeliveryHistory = this.deliveryService.getDeliveryHistory.bind(this.deliveryService);
 }
 
 export const apiService = new ApiService();

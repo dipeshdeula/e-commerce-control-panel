@@ -248,29 +248,35 @@ export class BannerEventService extends BaseApiService {
     if (params?.pageNumber) queryParams.append('pageNumber', params.pageNumber.toString());
     if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
     if (params?.includeDeleted !== undefined) queryParams.append('includeDeleted', params.includeDeleted.toString());
-    if (params?.status) queryParams.append('status', params.status);
+    if (params?.status && params.status !== 'all-statuses') queryParams.append('status', params.status);
     if (params?.isActive !== undefined) queryParams.append('isActive', params.isActive.toString());
-    if (params?.eventType) queryParams.append('eventType', params.eventType);
+    if (params?.eventType && params.eventType !== 'all-types') queryParams.append('eventType', params.eventType);
     if (params?.startDate) queryParams.append('startDate', params.startDate);
     if (params?.endDate) queryParams.append('endDate', params.endDate);
 
     const url = `${this.BASE_URL}/api/banner-events${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     const response = await fetch(url, {
-      // headers: this.getAuthHeaders(),
-      method: 'GET'
+       headers: this.getAuthHeaders(),
+       method: 'GET'
     });
+    console.log("Banner events response:", response);
     
     const result = await this.handleResponse<{ data: BannerEvent[]; totalCount: number; pageNumber: number; pageSize: number; totalPages: number; hasPreviousPage: boolean; hasNextPage: boolean }>(response);
-    
+    if(!result.success)
+    {
+      throw new Error(result.message || 'Failed to fetch banner events');
+    }
+    console.log("Banner events result:", result);
     return result;
   }
 
   // Get banner event by ID
   async getBannerEventById(bannerId: number) {
     const response = await fetch(`${this.BASE_URL}/api/banner-events/getEventById?bannerId=${bannerId}`, {
-      // headers: this.getAuthHeaders()
+      headers: this.getAuthHeaders()
     });
+    console.log("Banner event response:", response);
     return this.handleResponse<BannerEvent>(response);
   }
 
