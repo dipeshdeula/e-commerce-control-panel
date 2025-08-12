@@ -80,6 +80,7 @@ const Dashboard: React.FC = () => {
   });
 
   const dashboard = dashboardResponse?.data;
+  console.log('Dashboard Data:', dashboard);
 
   // 🔄 Loading State with Professional UI
   if (isLoading) {

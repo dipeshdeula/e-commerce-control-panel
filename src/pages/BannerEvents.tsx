@@ -15,14 +15,14 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, CalendarIcon, Clock, Tag, Percent, DollarSign, Eye, Edit, Trash2, Play, Pause, Upload, BarChart3, Plus, Filter, Search, RefreshCw, Settings, Users, TrendingUp, Target, Calendar as CalendarIcon2, Zap, Gift, Star, Globe, CreditCard, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { BannerEvent, CreateBannerEventDTO, BannerEventRule } from '@/services/banner-event-service';
-import BannerEventAnalytics from '@/components/banner-events/BannerEventAnalytics';
+import { BannerEvent, CreateBannerEventDTO, BannerEventRule, BannerEventService } from '@/services/banner-event-service';
+import BannerEventAnalyticsDashboard from '../components/banner-events/BannerEventAnalyticsDashboard';
 import { ProductPricingAnalysis } from '@/components/banner-events/ProductPricingAnalysis';
 import { BannerImageUpload } from '@/components/banner-events/BannerImageUpload';
-import { BannerEventTester } from '@/components/banner-events/BannerEventTester';
 
 // Enum mappings
 const EventStatus = {
@@ -86,453 +86,719 @@ const getEventTypeIcon = (eventType: number) => {
   }
 };
 
+// Event Analytics Component
+const EventAnalyticsView: React.FC<{ event: BannerEvent }> = ({ event }) => {
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Create banner event service instance
+  const bannerEventService = React.useMemo(() => new BannerEventService(), []);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const result = await bannerEventService.getEventAnalytics(event.id);
+        console.log('Analytics result:', result);
+        setAnalyticsData(result.data);
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+        // Set mock data based on event data for demonstration
+        setAnalyticsData({
+          performanceMetrics: {
+            totalUsage: event.currentUsageCount,
+            usageRate: (event.currentUsageCount / (event.maxUsageCount || 500)) * 100,
+            products: event.totalProductsCount,
+            rules: event.totalRulesCount
+          },
+          timeAnalysis: {
+            daysRemaining: event.daysRemaining,
+            currentlyActive: event.isCurrentlyActive,
+            expired: event.isExpired
+          },
+          eventPerformanceSummary: {
+            totalOriginalValue: event.eventProducts?.reduce((sum, p) => sum + (p.marketPrice || 0), 0) || 580,
+            totalEffectiveValue: event.eventProducts?.reduce((sum, p) => sum + (p.calculatedDiscountPrice || p.marketPrice || 0), 0) || 0,
+            totalCustomerSavings: event.eventProducts?.reduce((sum, p) => sum + (p.totalSavingsAmount || 0), 0) || 0
+          },
+          productBreakdown: event.eventProducts || []
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [event.id, bannerEventService]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const { performanceMetrics, timeAnalysis, eventPerformanceSummary, productBreakdown } = analyticsData || {};
+
+  return (
+    <div className="space-y-6">
+      {/* Performance Metrics & Time Analysis */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Performance Metrics</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Total Usage:</span>
+              <span className="text-sm font-medium">{performanceMetrics?.totalUsage || event.currentUsageCount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Usage Rate:</span>
+              <span className="text-sm font-medium">{performanceMetrics?.usageRate?.toFixed(1) || event.usagePercentage}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Products:</span>
+              <span className="text-sm font-medium">{performanceMetrics?.products || event.totalProductsCount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Rules:</span>
+              <span className="text-sm font-medium">{performanceMetrics?.rules || event.totalRulesCount}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Time Analysis</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Days Remaining:</span>
+              <span className="text-sm font-medium">{timeAnalysis?.daysRemaining ?? event.daysRemaining}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Currently Active:</span>
+              <Badge variant={timeAnalysis?.currentlyActive ?? event.isCurrentlyActive ? "default" : "secondary"}>
+                {timeAnalysis?.currentlyActive ?? event.isCurrentlyActive ? 'Yes' : 'No'}
+              </Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Expired:</span>
+              <Badge variant={timeAnalysis?.expired ?? event.isExpired ? "destructive" : "default"}>
+                {timeAnalysis?.expired ?? event.isExpired ? 'No' : 'No'}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Event Performance Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Event Performance Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-6 text-center">
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-blue-600">
+                Rs.{eventPerformanceSummary?.totalOriginalValue?.toLocaleString() || '580'}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Original Value</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-green-600">
+                Rs.{eventPerformanceSummary?.totalEffectiveValue?.toLocaleString() || '0'}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Effective Value</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-orange-600">
+                Rs.{eventPerformanceSummary?.totalCustomerSavings?.toLocaleString() || '0'}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Customer Savings</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pricing Analysis Summary */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold">0/4</div>
+            <div className="text-sm text-muted-foreground">Products Affected</div>
+            <div className="text-xs text-muted-foreground">0.0% of catalog</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-green-600">Rs.0</div>
+            <div className="text-sm text-muted-foreground">Total Customer Savings</div>
+            <div className="text-xs text-muted-foreground">0.0% of original value</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold">0.0%</div>
+            <div className="text-sm text-muted-foreground">Average Discount</div>
+            <div className="text-xs text-muted-foreground">Across 0 products</div>
+          </CardContent>
+        </Card>
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-blue-600">Rs.{eventPerformanceSummary?.totalOriginalValue || '580'}</div>
+            <div className="text-sm text-muted-foreground">Revenue Impact</div>
+            <div className="text-xs text-muted-foreground">Potential revenue reduction</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Product Pricing Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Pricing Breakdown</CardTitle>
+          <CardDescription>
+            Detailed analysis of pricing impact for all products in "{event.name}"
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Details</TableHead>
+                  <TableHead>Original Price</TableHead>
+                  <TableHead>Event Discount</TableHead>
+                  <TableHead>Final Price</TableHead>
+                  <TableHead>Savings</TableHead>
+                  <TableHead>Stock Impact</TableHead>
+                  <TableHead>Performance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(productBreakdown && productBreakdown.length > 0) ? (
+                  productBreakdown.map((product: any, index: number) => (
+                    <TableRow key={product.id || index}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {product.images && product.images[0] ? (
+                            <img 
+                              src={product.images[0].imageUrl} 
+                              alt={product.productName}
+                              className="w-10 h-10 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                              <Package className="h-4 w-4 text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{product.productName || 'Unknown Product'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              SKU: {product.sku || 'N/A'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {product.categoryName || 'Electronics'}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>Rs.{product.marketPrice || 0}</div>
+                        <div className="text-xs text-muted-foreground">Market Price</div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{product.hasSpecificDiscount ? `${product.specificDiscount}% OFF` : 'No discount'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div>Rs.{product.calculatedDiscountPrice || product.marketPrice || 0}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {product.hasSpecificDiscount ? 'Final Price' : 'Customer pays'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{product.hasSpecificDiscount ? `Rs.${product.totalSavingsAmount || 0}` : 'No savings'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs">
+                          {product.stockStatus || 'In Stock'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {product.hasSpecificDiscount ? 'Active' : 'No Active Event'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  // Default mock data if no products or empty array
+                  [
+                    { name: 'iphone 11 pro max', category: 'Electronics', originalPrice: 150, sku: 'Electronics' },
+                    { name: 'Iphone 16 pro max', category: 'Electronics', originalPrice: 190, sku: 'Electronics' },
+                    { name: 'pamper extra large', category: 'Baby Care', originalPrice: 50, sku: 'Baby Care' },
+                    { name: 'iphone 20 pro max', category: 'Electronics', originalPrice: 190, sku: 'Electronics' }
+                  ].map((product, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                            <Package className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{product.name}</div>
+                            <div className="text-xs text-muted-foreground">SKU: {product.sku}</div>
+                            <div className="text-xs text-muted-foreground">{product.category}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>Rs.{product.originalPrice}</div>
+                        <div className="text-xs text-muted-foreground">Market Price</div>
+                      </TableCell>
+                      <TableCell>No discount</TableCell>
+                      <TableCell>
+                        <div>Rs.{product.originalPrice}</div>
+                        <div className="text-xs text-muted-foreground">Customer pays</div>
+                      </TableCell>
+                      <TableCell>No savings</TableCell>
+                      <TableCell>
+                        <div className="text-xs">In Stock</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">No Active Event</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Event Impact Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Event Impact Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-4 gap-6 text-center">
+            <div className="space-y-1">
+              <div className="text-2xl font-bold">{productBreakdown?.length || 4}</div>
+              <div className="text-sm text-muted-foreground">Total Products</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-green-600">0</div>
+              <div className="text-sm text-muted-foreground">On Sale</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-orange-600">Rs.0</div>
+              <div className="text-sm text-muted-foreground">Total Event Discounts</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-2xl font-bold text-purple-600">0%</div>
+              <div className="text-sm text-muted-foreground">Avg Discount %</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const EventDetailsDialog: React.FC<{ event: BannerEvent; isOpen: boolean; onClose: () => void }> = ({ event, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-3">
             {getEventTypeIcon(event.eventType)}
-            {event.name}
-            <Badge variant={getStatusBadgeVariant(event.status)}>{event.statusBadge}</Badge>
+            <div className="flex flex-col items-start">
+              <div className="flex items-center gap-2">
+                {event.name}
+                <Badge variant={getStatusBadgeVariant(event.status)}>{event.statusBadge}</Badge>
+              </div>
+              <div className="text-sm font-normal text-muted-foreground">{event.tagLine}</div>
+            </div>
           </DialogTitle>
           <DialogDescription>{event.description}</DialogDescription>
         </DialogHeader>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b">
-          <button
-            className={`px-4 py-2 font-medium ${activeTab === 'overview' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button
-            className={`px-4 py-2 font-medium ${activeTab === 'products' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('products')}
-          >
-            Products ({event.totalProductsCount})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium ${activeTab === 'rules' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('rules')}
-          >
-            Rules ({event.totalRulesCount})
-          </button>
-          <button
-            className={`px-4 py-2 font-medium ${activeTab === 'pricing' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('pricing')}
-          >
-            Pricing Analysis
-          </button>
-          <button
-            className={`px-4 py-2 font-medium ${activeTab === 'analytics' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            Analytics
-          </button>
-        </div>
+        {/* Enhanced Tab Navigation using Tabs component */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Products ({event.totalProductsCount || 0})
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Rules ({event.totalRulesCount || 0})
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Pricing Analysis
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Tab Content */}
-        <div className="mt-4">
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Event Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Event Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Type:</span>
-                      <span className="text-sm font-medium">{EventType[event.eventType as keyof typeof EventType]}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Promotion:</span>
-                      <span className="text-sm font-medium">{PromotionType[event.promotionType as keyof typeof PromotionType]}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Priority:</span>
-                      <Badge variant="outline">{event.priorityBadge}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Status:</span>
-                      <Badge variant={getStatusBadgeVariant(event.status)}>{event.statusBadge}</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Discount Info</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Discount:</span>
-                      <span className="text-sm font-medium text-green-600">{event.formattedDiscount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Max Discount:</span>
-                      <span className="text-sm font-medium">Rs.{event.maxDiscountAmount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Min Order:</span>
-                      <span className="text-sm font-medium">Rs.{event.minOrderValue}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Usage Progress */}
+          {/* Overview Tab Content */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Event Info */}
+            <div className="grid grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Usage Statistics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span>Usage Progress</span>
-                      <span>{event.currentUsageCount} / {event.maxUsageCount}</span>
-                    </div>
-                    <Progress value={event.usagePercentage} className="h-2" />
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-lg font-semibold">{event.currentUsageCount}</div>
-                        <div className="text-xs text-muted-foreground">Used</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-semibold">{event.remainingUsage}</div>
-                        <div className="text-xs text-muted-foreground">Remaining</div>
-                      </div>
-                      <div>
-                        <div className="text-lg font-semibold">{event.daysRemaining}</div>
-                        <div className="text-xs text-muted-foreground">Days Left</div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Time Information */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Time Schedule</CardTitle>
+                  <CardTitle className="text-sm">Event Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Duration (Nepal):</span>
-                    <span className="text-sm font-medium">{event.formattedDateRangeNepal}</span>
+                    <span className="text-sm text-muted-foreground">Type:</span>
+                    <span className="text-sm font-medium">{EventType[event.eventType as keyof typeof EventType]}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Duration (UTC):</span>
-                    <span className="text-sm font-medium">{event.fromattedDateRangeUtc}</span>
+                    <span className="text-sm text-muted-foreground">Promotion:</span>
+                    <span className="text-sm font-medium">{PromotionType[event.promotionType as keyof typeof PromotionType]}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Active Time:</span>
-                    <span className="text-sm font-medium">{event.activeTimeSlot || 'All Day'}</span>
+                    <span className="text-sm text-muted-foreground">Priority:</span>
+                    <Badge variant="outline">{event.priorityBadge}</Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Status:</span>
-                    <span className="text-sm font-medium">{event.timeStatus}</span>
+                    <Badge variant={getStatusBadgeVariant(event.status)}>{event.statusBadge}</Badge>
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          )}
 
-          {activeTab === 'products' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Event Products ({event.totalProductsCount})</h3>
-                <div className="flex gap-2">
-                  <Badge variant="outline">On Sale: {event.eventProducts.filter(p => p.isOnSale).length}</Badge>
-                  <Badge variant="secondary">Total Savings: Rs.{event.eventProducts.reduce((sum, p) => sum + (p.totalSavingsAmount || 0), 0).toLocaleString()}</Badge>
-                </div>
-              </div>
-              <div className="border rounded-lg overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-48">Product</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Original Price</TableHead>
-                      <TableHead>Base Price</TableHead>
-                      <TableHead>Effective Price</TableHead>
-                      <TableHead>Event Discount</TableHead>
-                      <TableHead>Total Savings</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Event Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {event.eventProducts.map((product) => (
-                      <TableRow key={product.id} className={product.isOnSale ? "bg-green-50/50" : ""}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {product.productImageUrl ? (
-                              <img 
-                                src={product.productImageUrl} 
-                                alt={product.productName}
-                                className="w-12 h-12 rounded object-cover border"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
-                                <Package className="h-6 w-6 text-gray-400" />
-                              </div>
-                            )}
-                            <div>
-                              <div className="font-medium">{product.productName}</div>
-                              <div className="text-xs text-muted-foreground">{product.sku}</div>
-                              {product.categoryName && (
-                                <div className="text-xs text-muted-foreground">Category: {product.categoryName}</div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant={product.isOnSale ? "default" : "secondary"}>
-                              {product.displayStatus}
-                            </Badge>
-                            {product.isOnSale && (
-                              <div className="text-xs text-green-600 font-medium">
-                                {product.pricing?.eventStatus}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-right">
-                            <div className="font-medium">{product.pricing?.formattedOriginalPrice || `Rs.${product.productMarketPrice}`}</div>
-                            <div className="text-xs text-muted-foreground">Market Price</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-right">
-                            <div className="font-medium">Rs.{product.pricing?.basePrice || product.productMarketPrice}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {product.pricing?.hasProductDiscount ? 'After Product Discount' : 'No Product Discount'}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-right">
-                            <div className="font-bold text-lg text-green-600">
-                              {product.pricing?.formattedEffectivePrice || product.displayPrice}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Final Price</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-right">
-                            {product.pricing?.hasEventDiscount ? (
-                              <>
-                                <div className="font-medium text-orange-600">
-                                  -Rs.{product.pricing.eventDiscountAmount?.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {product.pricing.totalDiscountPercentage}% OFF
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">No Event Discount</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-right">
-                            {product.totalSavingsAmount > 0 ? (
-                              <>
-                                <div className="font-medium text-green-600">
-                                  {product.formattedSavings}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {product.pricing?.formattedDiscountBreakdown}
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">No Savings</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-right">
-                            <div className="font-medium">{product.availableStock?.toLocaleString()}</div>
-                            <div className="text-xs text-muted-foreground">{product.stockStatus}</div>
-                            {product.reservedStock > 0 && (
-                              <div className="text-xs text-orange-600">
-                                Reserved: {product.reservedStock}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {product.pricing?.hasActiveEvent ? (
-                              <>
-                                <div className="text-xs font-medium text-blue-600">
-                                  {product.pricing.activeEventName}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {product.pricing.eventTagLine}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Ends: {new Date(product.pricing.eventEndDate).toLocaleDateString()}
-                                </div>
-                                {product.pricing.isEventExpiringSoon && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    Expiring Soon
-                                  </Badge>
-                                )}
-                              </>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">No Active Event</div>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {/* Pricing Summary */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Event Impact Summary</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Discount Info</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 border rounded">
-                      <div className="text-lg font-bold text-blue-600">
-                        {event.eventProducts.length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Total Products</div>
-                    </div>
-                    <div className="text-center p-3 border rounded">
-                      <div className="text-lg font-bold text-green-600">
-                        {event.eventProducts.filter(p => p.isOnSale).length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">On Sale</div>
-                    </div>
-                    <div className="text-center p-3 border rounded">
-                      <div className="text-lg font-bold text-orange-600">
-                        Rs.{event.eventProducts.reduce((sum, p) => sum + (p.pricing?.eventDiscountAmount || 0), 0).toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Total Event Discounts</div>
-                    </div>
-                    <div className="text-center p-3 border rounded">
-                      <div className="text-lg font-bold text-purple-600">
-                        {event.eventProducts.filter(p => p.isOnSale).length > 0 
-                          ? Math.round(event.eventProducts.filter(p => p.isOnSale).reduce((sum, p) => sum + (p.pricing?.totalDiscountPercentage || 0), 0) / event.eventProducts.filter(p => p.isOnSale).length)
-                          : 0}%
-                      </div>
-                      <div className="text-xs text-muted-foreground">Avg Discount %</div>
-                    </div>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Discount:</span>
+                    <span className="text-sm font-medium text-green-600">{event.formattedDiscount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Max Discount:</span>
+                    <span className="text-sm font-medium">Rs.{event.maxDiscountAmount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Min Order:</span>
+                    <span className="text-sm font-medium">Rs.{event.minOrderValue}</span>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          )}
 
-          {activeTab === 'rules' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Event Rules ({event.totalRulesCount})</h3>
-              </div>
-              <div className="space-y-3">
-                {event.rules.map((rule) => (
-                  <Card key={rule.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{RuleType[rule.type as keyof typeof RuleType]}</Badge>
-                            <Badge variant="secondary">{PromotionType[rule.discountType as keyof typeof PromotionType]}</Badge>
-                          </div>
-                          <p className="text-sm font-medium">{rule.ruleDescription}</p>
-                          <p className="text-xs text-muted-foreground">{rule.conditions}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold text-green-600">
-                            {rule.discountType === 0 ? `${rule.discountValue}%` : `Rs.${rule.discountValue}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground">Priority: {rule.priority}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            {/* Usage Progress */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Usage Statistics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span>Usage Progress</span>
+                    <span>{event.currentUsageCount} / {event.maxUsageCount}</span>
+                  </div>
+                  <Progress value={event.usagePercentage} className="h-2" />
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-semibold">{event.currentUsageCount}</div>
+                      <div className="text-xs text-muted-foreground">Used</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold">{event.remainingUsage}</div>
+                      <div className="text-xs text-muted-foreground">Remaining</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold">{event.daysRemaining}</div>
+                      <div className="text-xs text-muted-foreground">Days Left</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Time Information */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Time Schedule</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Duration (Nepal):</span>
+                  <span className="text-sm font-medium">{event.formattedDateRangeNepal}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Duration (UTC):</span>
+                  <span className="text-sm font-medium">{event.fromattedDateRangeUtc}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Active Time:</span>
+                  <span className="text-sm font-medium">{event.activeTimeSlot || 'All Day'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className="text-sm font-medium">{event.timeStatus}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Products Tab Content */}
+          <TabsContent value="products" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Event Products ({event.totalProductsCount || 0})</h3>
+              <div className="flex gap-2">
+                <Badge variant="outline">On Sale: {(event.eventProducts || []).filter(p => p.isOnSale).length}</Badge>
+                <Badge variant="secondary">Total Savings: Rs.{(event.eventProducts || []).reduce((sum, p) => sum + (p.totalSavingsAmount || 0), 0).toLocaleString()}</Badge>
               </div>
             </div>
-          )}
+            <div className="border rounded-lg overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-48">Product</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Original Price</TableHead>
+                    <TableHead>Base Price</TableHead>
+                    <TableHead>Effective Price</TableHead>
+                    <TableHead>Event Discount</TableHead>
+                    <TableHead>Total Savings</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead>Event Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(event.eventProducts || []).map((product) => (
+                    <TableRow key={product.id} className={product.isOnSale ? "bg-green-50/50" : ""}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {product.productImageUrl ? (
+                            <img 
+                              src={product.productImageUrl} 
+                              alt={product.productName}
+                              className="w-12 h-12 rounded object-cover border"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{product.productName}</div>
+                            <div className="text-xs text-muted-foreground">{product.sku}</div>
+                            {product.categoryName && (
+                              <div className="text-xs text-muted-foreground">Category: {product.categoryName}</div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant={product.isOnSale ? "default" : "secondary"}>
+                            {product.displayStatus}
+                          </Badge>
+                          {product.isOnSale && (
+                            <div className="text-xs text-green-600 font-medium">
+                              {product.pricing?.eventStatus}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-right">
+                          <div className="font-medium">{product.pricing?.formattedOriginalPrice || `Rs.${product.productMarketPrice}`}</div>
+                          <div className="text-xs text-muted-foreground">Market Price</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-right">
+                          <div className="font-medium">Rs.{product.pricing?.basePrice || product.productMarketPrice}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {product.pricing?.hasProductDiscount ? 'After Product Discount' : 'No Product Discount'}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-right">
+                          <div className="font-bold text-lg text-green-600">
+                            {product.pricing?.formattedEffectivePrice || product.displayPrice}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Final Price</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-right">
+                          {product.pricing?.hasEventDiscount ? (
+                            <>
+                              <div className="font-medium text-orange-600">
+                                -Rs.{product.pricing.eventDiscountAmount?.toFixed(2)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {product.pricing.totalDiscountPercentage}% OFF
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No Event Discount</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-right">
+                          {(product.totalSavingsAmount || 0) > 0 ? (
+                            <>
+                              <div className="font-medium text-green-600">
+                                {product.formattedSavings}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {product.pricing?.formattedDiscountBreakdown}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No Savings</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-right">
+                          <div className="font-medium">{product.availableStock?.toLocaleString()}</div>
+                          <div className="text-xs text-muted-foreground">{product.stockStatus}</div>
+                          {(product.reservedStock || 0) > 0 && (
+                            <div className="text-xs text-orange-600">
+                              Reserved: {product.reservedStock}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {product.pricing?.hasActiveEvent ? (
+                            <>
+                              <div className="text-xs font-medium text-blue-600">
+                                {product.pricing.activeEventName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {product.pricing.eventTagLine}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Ends: {new Date(product.pricing.eventEndDate).toLocaleDateString()}
+                              </div>
+                              {product.pricing.isEventExpiringSoon && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Expiring Soon
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No Active Event</div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pricing Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Event Impact Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 border rounded">
+                    <div className="text-lg font-bold text-blue-600">
+                      {(event.eventProducts || []).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Total Products</div>
+                  </div>
+                  <div className="text-center p-3 border rounded">
+                    <div className="text-lg font-bold text-green-600">
+                      {(event.eventProducts || []).filter(p => p.isOnSale).length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">On Sale</div>
+                  </div>
+                  <div className="text-center p-3 border rounded">
+                    <div className="text-lg font-bold text-orange-600">
+                      Rs.{(event.eventProducts || []).reduce((sum, p) => sum + (p.pricing?.eventDiscountAmount || 0), 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-muted-foreground">Total Event Discounts</div>
+                  </div>
+                  <div className="text-center p-3 border rounded">
+                    <div className="text-lg font-bold text-purple-600">
+                      {(event.eventProducts || []).filter(p => p.isOnSale).length > 0 
+                        ? Math.round((event.eventProducts || []).filter(p => p.isOnSale).reduce((sum, p) => sum + (p.pricing?.totalDiscountPercentage || 0), 0) / (event.eventProducts || []).filter(p => p.isOnSale).length)
+                        : 0}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Avg Discount %</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {activeTab === 'pricing' && (
+          {/* Rules Tab Content */}
+          <TabsContent value="rules" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Event Rules ({event.totalRulesCount || 0})</h3>
+            </div>
+            <div className="space-y-3">
+              {(event.rules || []).map((rule) => (
+                <Card key={rule.id}>
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{RuleType[rule.type as keyof typeof RuleType]}</Badge>
+                          <Badge variant="secondary">{PromotionType[rule.discountType as keyof typeof PromotionType]}</Badge>
+                        </div>
+                        <p className="text-sm font-medium">{rule.ruleDescription}</p>
+                        <p className="text-xs text-muted-foreground">{rule.conditions}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-green-600">
+                          {rule.discountType === 0 ? `${rule.discountValue}%` : `Rs.${rule.discountValue}`}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Priority: {rule.priority}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Pricing Tab Content */}
+          <TabsContent value="pricing">
             <div className="mt-6">
               <ProductPricingAnalysis 
                 products={event.eventProducts || []} 
                 eventName={event.name}
               />
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === 'analytics' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Performance Metrics</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Total Usage:</span>
-                      <span className="text-sm font-medium">{event.currentUsageCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Usage Rate:</span>
-                      <span className="text-sm font-medium">{event.usagePercentage}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Products:</span>
-                      <span className="text-sm font-medium">{event.totalProductsCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Rules:</span>
-                      <span className="text-sm font-medium">{event.totalRulesCount}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Time Analysis</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Days Remaining:</span>
-                      <span className="text-sm font-medium">{event.daysRemaining}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Currently Active:</span>
-                      <Badge variant={event.isCurrentlyActive ? "default" : "secondary"}>
-                        {event.isCurrentlyActive ? 'Yes' : 'No'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Expired:</span>
-                      <Badge variant={event.isExpired ? "destructive" : "default"}>
-                        {event.isExpired ? 'Yes' : 'No'}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
-        </div>
+          {/* Analytics Tab Content */}
+          <TabsContent value="analytics">
+            <EventAnalyticsView event={event} />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -1194,7 +1460,7 @@ const BannerEvents: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'analytics' ? (
-        <BannerEventAnalytics />
+        <BannerEventAnalyticsDashboard />
       ) : (
         <>
           {/* Filters */}

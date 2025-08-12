@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bell, Search, User, LogOut, ChevronDown, UsersIcon } from 'lucide-react';
+import { Bell, Search, User, LogOut, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,11 +22,6 @@ export const Topbar: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading } = useAppSelector(state => state.auth);
   const userImage = user?.actort;
-  
-  console.log('Full user object:', user);
-  console.log('User actort property:', user?.actort);
-  console.log('API_BASE_URL:', API_BASE_URL);
-  console.log('User Image:', userImage ? `${API_BASE_URL}/${userImage}` : 'No image');
 
 
   const handleLogout = async () => {
@@ -82,17 +77,13 @@ export const Topbar: React.FC = () => {
           <DropdownMenuTrigger asChild>            
             <Button variant="ghost" className="flex items-center space-x-3 h-auto p-2">
               <div className="h-8 w-8 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-200">
-                {user?.actort ? (
-                  <img 
-                    src={`${API_BASE_URL}/${user.actort}`} 
-                    alt={user?.name || 'User'} 
+                {userImage ? (
+                  <img
+                    src={`${API_BASE_URL}/${userImage}`}
+                    alt={user?.name || 'User'}
                     className="w-8 h-8 rounded-full object-cover"
                     onError={(e) => {
-                      console.error('Topbar image failed to load:', `${API_BASE_URL}/${user.actort}`);
-                      e.currentTarget.style.display = 'none';
-                    }}
-                    onLoad={() => {
-                      console.log('Topbar image loaded successfully:', `${API_BASE_URL}/${user.actort}`);
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
                     }}
                   />
                 ) : (
@@ -135,7 +126,7 @@ export const Topbar: React.FC = () => {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/settings')}>
-              <User className="mr-2 h-4 w-4" />
+              <SettingsIcon className="mr-2 h-4 w-4" />
               <span>Profile Settings</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/notifications')}>

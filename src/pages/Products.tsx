@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService as api } from '../services/api';
-import { ProductDTO, SubSubCategoryDTO } from '../types/api';
+import { apiService as api } from '@/services/api';
+import { ProductDTO, SubSubCategoryDTO } from '@/types/api';
 import {
   Card,
   CardContent,
@@ -34,11 +34,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../components/ui/pagination';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import { Badge } from '../components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -79,8 +79,8 @@ import {
   Check,
   ChevronsUpDown
 } from 'lucide-react';
-import { toast } from '../hooks/use-toast';
-import { cn } from '../lib/utils';
+import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { API_BASE_URL } from '@/config/api.config';
 
 const Products = () => {
@@ -114,7 +114,7 @@ const Products = () => {
   // Fetch products
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ['products', currentPage, pageSize, searchTerm],
-    queryFn: () => api.getProducts({ 
+    queryFn: () => api.getAllProductsAdmin({ 
       page: currentPage, 
       size: pageSize,
       searchTerm: searchTerm || undefined

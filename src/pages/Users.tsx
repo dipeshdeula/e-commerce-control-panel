@@ -68,13 +68,14 @@ import {
   Image
 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api.config';
+import { NEPAL_PROVINCES, getCitiesByProvince, NEPAL_CITIES } from '@/constants/nepal-locations';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface UserFormValues {
   name: string;
   email: string;
   password?: string;
   contact: string;  // Changed from phone to contact
-  address?: string;
 }
 
 interface User {
@@ -93,7 +94,37 @@ interface User {
   imageUrl?: string;
 }
 
+interface AddressFormValues {
+  id?: number;
+  label: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault?: boolean;
+}
+
 export const Users: React.FC = () => {
+  // Normalize province/city to known values so Selects bind correctly
+  const normalizeProvince = (province?: string): string => {
+    if (!province) return '';
+    const pTrim = province.replace(/\s*Province$/i, '').trim();
+    const match = NEPAL_PROVINCES.find(
+      (p) => p.value.toLowerCase() === pTrim.toLowerCase() || p.label.toLowerCase() === province.toLowerCase()
+    );
+    return match ? match.value : pTrim;
+  };
+
+  const normalizeCity = (city?: string, province?: string): string => {
+    if (!city) return '';
+    const prov = normalizeProvince(province || '');
+    const cities = getCitiesByProvince(prov);
+    const match = cities.find((c) => c.value.toLowerCase() === city.toLowerCase() || c.label.toLowerCase() === city.toLowerCase());
+    return match ? match.value : city;
+  };
+
   console.log('Users component rendering...');
   
   // Error state for component-level error handling
@@ -111,13 +142,23 @@ export const Users: React.FC = () => {
   const [tempRegistrationData, setTempRegistrationData] = useState<any>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [addressData, setAddressData] = useState('');
+  const [addressForm, setAddressForm] = useState<AddressFormValues>({
+    label: 'home',
+    street: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    latitude: undefined,
+    longitude: undefined,
+    isDefault: false,
+  });
+  const [userAddresses, setUserAddresses] = useState<AddressFormValues[]>([]);
+  const [addressSelectValue, setAddressSelectValue] = useState<string>('new');
   const [formData, setFormData] = useState<UserFormValues>({
     name: '',
     email: '',
     password: '',
     contact: '',
-    address: '',
   });
   const [otpData, setOtpData] = useState({
     email: '',
@@ -356,40 +397,44 @@ export const Users: React.FC = () => {
     },
   });
 
-  // Role update mutation
+  // Role update mutation with optimistic UI so no manual refresh is needed
   const updateRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: number; role: number }) => 
-      apiService.updateUserRole(userId, role),
+    mutationFn: ({ userId, role }: { userId: number; role: number }) => apiService.updateUserRole(userId, role),
+    onMutate: async ({ userId, role }) => {
+      await queryClient.cancelQueries({ queryKey: ['users', currentPage, pageSize, searchTerm] });
+      const previous = queryClient.getQueryData<any>(['users', currentPage, pageSize, searchTerm]);
+      queryClient.setQueryData(['users', currentPage, pageSize, searchTerm], (old: any) => {
+        if (!old) return old;
+        const clone = JSON.parse(JSON.stringify(old));
+        const arr = Array.isArray(clone?.data?.data) ? clone.data.data : Array.isArray(clone?.data) ? clone.data : [];
+        const target = arr.find((u: any) => (u.id || u.userId) === userId);
+        if (target) {
+          target.roleId = role;
+          target.role = role;
+        }
+        return clone;
+      });
+      return { previous };
+    },
+    onError: (error: any, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['users', currentPage, pageSize, searchTerm], ctx.previous);
+      const errorMessage = error?.message || 'Failed to update user role';
+      toast({ title: 'Error updating role', description: errorMessage, variant: 'destructive', duration: 4000 });
+    },
     onSuccess: (response: any) => {
+      // Background refresh for consistency
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsRoleUpdateOpen(false);
       setSelectedUser(null);
-      setSelectedRole(Role.User); // Reset to default
-      toast({ 
-        title: 'Success', 
-        description: response?.data || 'User role updated successfully',
-        duration: 5000,
-      });
-    },
-    onError: (error: any) => {
-      console.error('Role update error:', error);
-      const errorMessage = error?.message || 'Failed to update user role';
-      toast({ 
-        title: 'Error updating role', 
-        description: errorMessage,
-        variant: 'destructive',
-        duration: 5000,
-      });
+      setSelectedRole(Role.User);
+      const desc = typeof response?.message === 'string' ? response.message : 'User role updated successfully';
+      toast({ title: 'Success', description: desc, duration: 3000 });
     },
   });
 
-  // Image upload mutation
-  const updateImageMutation = useMutation({
-    mutationFn: ({ userId, imageFile }: { userId: number; imageFile: File }) => {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-      return apiService.updateUserImage(userId, formData);
-    },
+  // Image upload mutation (POST /user/upload?userId=.. with field 'file')
+  const uploadImageMutation = useMutation({
+    mutationFn: ({ userId, imageFile }: { userId: number; imageFile: File }) => apiService.uploadUserImage(userId, imageFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsImageUploadOpen(false);
@@ -413,30 +458,58 @@ export const Users: React.FC = () => {
     },
   });
 
-  // Address update mutation
-  const updateAddressMutation = useMutation({
-    mutationFn: ({ userId, address }: { userId: number; address: string }) => 
-      apiService.updateUserAddress(userId, { address }),
+  // Address mutations: add and update
+  const addAddressMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: number; data: AddressFormValues }) => 
+      apiService.addUserAddress(userId, {
+        label: data.label,
+        street: data.street,
+        city: data.city,
+        province: data.province,
+        postalCode: data.postalCode,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        isDefault: data.isDefault,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setIsAddressUpdateOpen(false);
-      setAddressData('');
       setSelectedUser(null);
-      toast({ 
-        title: 'Success', 
-        description: 'User address updated successfully',
-        duration: 3000,
-      });
+      setUserAddresses([]);
+      setAddressSelectValue('new');
+      setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
+      toast({ title: 'Success', description: 'Address added successfully', duration: 3000 });
     },
     onError: (error: any) => {
-      console.error('Address update error:', error);
-      const errorMessage = error?.message || 'Failed to update user address';
-      toast({ 
-        title: 'Error updating address', 
-        description: errorMessage,
-        variant: 'destructive',
-        duration: 5000,
-      });
+      const errorMessage = error?.message || 'Failed to add address';
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive', duration: 5000 });
+    },
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: ({ addressId, data }: { addressId: number; data: AddressFormValues }) => 
+      apiService.updateUserAddress(addressId, {
+        label: data.label,
+        street: data.street,
+        city: data.city,
+        province: data.province,
+        postalCode: data.postalCode,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        isDefault: data.isDefault,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsAddressUpdateOpen(false);
+      setSelectedUser(null);
+      setUserAddresses([]);
+      setAddressSelectValue('new');
+      setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
+      toast({ title: 'Success', description: 'Address updated successfully', duration: 3000 });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || 'Failed to update address';
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive', duration: 5000 });
     },
   });
 
@@ -447,10 +520,9 @@ export const Users: React.FC = () => {
       email: '',
       password: '',
       contact: '',
-      address: '',
     });
-    setImageFile(null);
-    setAddressData('');
+  setImageFile(null);
+  setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
     setSelectedUser(null);
     setTempRegistrationData(null);
     setOtpData({ email: '', otp: '' });
@@ -465,8 +537,7 @@ export const Users: React.FC = () => {
       name: user.name || '',
       email: user.email || '',
       password: '', // Don't populate password for security
-      contact: user.phone || user.contact || '',
-      address: user.address || '',
+  contact: user.phone || user.contact || '',
     });
     setIsEditOpen(true);
   };
@@ -515,11 +586,10 @@ export const Users: React.FC = () => {
       console.log('Updating user with ID:', userId);
       console.log('Update data:', formData);
       
-      const updateData = {
+  const updateData = {
         name: formData.name,
         email: formData.email,
         contact: formData.contact,
-        ...(formData.address && { address: formData.address }), // Include address if provided
         ...(formData.password && { password: formData.password }) // Only include password if provided
       };
       updateMutation.mutate({ id: userId, userData: updateData });
@@ -615,7 +685,7 @@ export const Users: React.FC = () => {
     }
   };
 
-  const handleAddressUpdate = (user: User) => {
+  const handleAddressUpdate = async (user: User) => {
     try {
       if (!user) {
         console.error('No user provided to handleAddressUpdate');
@@ -633,8 +703,58 @@ export const Users: React.FC = () => {
       }
 
       setSelectedUser(user);
-      setAddressData(user.address || '');
       setIsAddressUpdateOpen(true);
+      // Prefer using addresses available on the user row to prefill immediately
+      const rowAddresses = ((user as any)?.addresses || (user as any)?.addressList || []) as any[];
+    if (Array.isArray(rowAddresses) && rowAddresses.length > 0) {
+        const normalized = rowAddresses.map((a: any) => ({
+          id: a.id,
+          label: a.label ?? a.name ?? 'home',
+      street: a.street ?? a.address ?? '',
+      city: normalizeCity(a.city ?? '', a.province),
+      province: normalizeProvince(a.province ?? ''),
+          postalCode: a.postalCode ?? a.zip ?? '',
+          latitude: a.latitude ?? undefined,
+          longitude: a.longitude ?? undefined,
+          isDefault: a.isDefault ?? false,
+        }));
+        setUserAddresses(normalized);
+        const preferred = normalized.find((a) => a.isDefault) || normalized[0];
+        setAddressForm(preferred);
+        setAddressSelectValue(preferred?.id ? String(preferred.id) : 'new');
+      } else {
+        // Fallback: fetch addresses if not present on row
+        try {
+          const resp = await apiService.getUserById(userId);
+          const udata = resp?.data?.data || resp?.data || {};
+          const addresses = (udata.addresses || udata.AddressList || udata.addressList || []) as any[];
+          const normalized = addresses.map((a: any) => ({
+            id: a.id,
+            label: a.label ?? a.name ?? 'home',
+            street: a.street ?? a.address ?? '',
+            city: normalizeCity(a.city ?? '', a.province),
+            province: normalizeProvince(a.province ?? ''),
+            postalCode: a.postalCode ?? a.zip ?? '',
+            latitude: a.latitude ?? undefined,
+            longitude: a.longitude ?? undefined,
+            isDefault: a.isDefault ?? false,
+          }));
+          setUserAddresses(normalized);
+          const preferred = normalized.find((a) => a.isDefault) || normalized[0];
+          if (preferred) {
+            setAddressForm(preferred);
+            setAddressSelectValue(preferred.id ? String(preferred.id) : 'new');
+          } else {
+            setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
+            setAddressSelectValue('new');
+          }
+        } catch (err) {
+          console.warn('Failed to load user addresses, proceeding with empty form', err);
+          setUserAddresses([]);
+          setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
+          setAddressSelectValue('new');
+        }
+      }
     } catch (error) {
       console.error('Error in handleAddressUpdate:', error);
       toast({
@@ -669,8 +789,8 @@ export const Users: React.FC = () => {
         return;
       }
 
-      console.log('Submitting image update:', { userId, imageFile: imageFile.name });
-      updateImageMutation.mutate({ userId, imageFile });
+  console.log('Submitting image upload:', { userId, imageFile: imageFile.name });
+  uploadImageMutation.mutate({ userId, imageFile });
     } catch (error) {
       console.error('Error in handleImageSubmit:', error);
       toast({
@@ -704,9 +824,12 @@ export const Users: React.FC = () => {
         });
         return;
       }
-
-      console.log('Submitting address update:', { userId, address: addressData });
-      updateAddressMutation.mutate({ userId, address: addressData });
+      // Decide add vs update: if addressForm has an id, update that address; otherwise add a new one
+      if (addressForm.id) {
+        updateAddressMutation.mutate({ addressId: addressForm.id, data: { ...addressForm } });
+      } else {
+        addAddressMutation.mutate({ userId, data: addressForm });
+      }
     } catch (error) {
       console.error('Error in handleAddressSubmit:', error);
       toast({
@@ -897,19 +1020,7 @@ export const Users: React.FC = () => {
                     />
                   </div>
                   
-                  <div className="grid gap-2">
-                    <Label htmlFor="address" className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      Address
-                    </Label>
-                    <Textarea
-                      id="address"
-                      placeholder="Enter address (optional)"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
+                  {/* Address excluded from registration payload by requirement */}
                 </div>
                 
                 <DialogFooter>
@@ -965,13 +1076,15 @@ export const Users: React.FC = () => {
         </CardHeader>
         
         <CardContent>
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
+    <div className="rounded-lg border border-gray-200 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/50">
                   <TableHead className="font-semibold">User Info</TableHead>
                   <TableHead className="font-semibold">Role & Status</TableHead>
                   <TableHead className="font-semibold">Contact</TableHead>
+                  <TableHead className="font-semibold">Address</TableHead>
+                  <TableHead className="font-semibold">Deleted</TableHead>
                   <TableHead className="font-semibold text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -992,9 +1105,22 @@ export const Users: React.FC = () => {
                     const userPhone = user.phone || user.contact;
                     const userId = user.id || user.userId;
                     const userImage = user.imageUrl || '';
+                    // Derive display address from addresses[] if available, or fallback to user.address
+                    const addrArray: any[] = Array.isArray((user as any)?.addresses)
+                      ? (user as any).addresses
+                      : Array.isArray((user as any)?.addressList)
+                        ? (user as any).addressList
+                        : [];
+                    const preferredAddr = addrArray.find((a) => a?.isDefault) || addrArray[0];
+                    const displayAddress = preferredAddr
+                      ? [preferredAddr.street, preferredAddr.city, preferredAddr.province, preferredAddr.postalCode]
+                          .filter(Boolean)
+                          .join(', ')
+                      : (user as any).address || '';
                     
+                    const isDeleted = user.isDeleted === true;
                     return (
-                    <TableRow key={userId || user.email} className="hover:bg-gray-50/50">
+                    <TableRow key={userId || user.email} className={`${isDeleted ? 'opacity-60 bg-red-50' : ''} hover:bg-gray-50/50`}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
@@ -1027,17 +1153,7 @@ export const Users: React.FC = () => {
                               <Shield className="w-3 h-3 mr-1" />
                               {roleInfo.label}
                             </Badge>
-                            {canUpdateRoles() && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRoleUpdate(user)}
-                                className="h-6 px-2 text-xs hover:bg-purple-50 hover:text-purple-600"
-                                title="Change Role"
-                              >
-                                <Settings className="w-3 h-3" />
-                              </Button>
-                            )}
+                            {/* Role quick-edit button removed as role update is handled elsewhere */}
                           </div>
                           <div>
                             <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs">
@@ -1055,128 +1171,145 @@ export const Users: React.FC = () => {
                               {userPhone}
                             </div>
                           )}
-                          {user.address && (
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate max-w-32" title={user.address}>
-                                {user.address}
-                              </span>
-                            </div>
-                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-gray-600 text-sm">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate max-w-48" title={displayAddress || 'No address'}>
+                            {displayAddress || '—'}
+                          </span>
                         </div>
                       </TableCell>
                       
                       <TableCell>
+                        <Badge variant={isDeleted ? 'destructive' : 'outline'} className="text-xs">
+                          {isDeleted ? 'Deleted' : 'Not Deleted'}
+                        </Badge>
+                      </TableCell>
+                      
+                      <TableCell>
                         <div className="flex items-center justify-center space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(user)}
-                            className="hover:bg-blue-50 hover:text-blue-600"
-                            title="Edit User"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleImageUpload(user)}
-                            className="hover:bg-green-50 hover:text-green-600"
-                            title="Update Profile Image"
-                          >
-                            <Camera className="w-4 h-4" />
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAddressUpdate(user)}
-                            className="hover:bg-orange-50 hover:text-orange-600"
-                            title="Update Address"
-                          >
-                            <MapPin className="w-4 h-4" />
-                          </Button>
-
-                          {canUpdateRoles() && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRoleUpdate(user)}
-                              className="hover:bg-purple-50 hover:text-purple-600"
-                              title="Update Role (Admin/SuperAdmin only)"
-                            >
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          )}
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              console.log('Soft delete clicked for user:', userId);
-                              if (userId) {
-                                softDeleteMutation.mutate(userId);
-                              }
-                            }}
-                            disabled={softDeleteMutation.isPending || !userId}
-                            className="hover:bg-yellow-50 hover:text-yellow-600"
-                          >
-                            {softDeleteMutation.isPending ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <UserX className="w-4 h-4" />
-                            )}
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => userId && unDeleteMutation.mutate(userId)}
-                            disabled={unDeleteMutation.isPending || !userId}
-                            className="hover:bg-green-50 hover:text-green-600"
-                          >
-                            {unDeleteMutation.isPending ? (
-                              <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <RotateCcw className="w-4 h-4" />
-                            )}
-                          </Button>
-                          
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="hover:bg-red-50 hover:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the user account for <strong>{user.name || 'this user'}</strong> and remove all associated data.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => {
-                                    console.log('Hard delete clicked for user:', userId);
-                                    if (userId) {
-                                      hardDeleteMutation.mutate(userId);
-                                    }
-                                  }}
-                                  disabled={!userId}
-                                  className="bg-red-600 hover:bg-red-700"
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(user)}
+                                  className="hover:bg-blue-50 hover:text-blue-600"
                                 >
-                                  Delete Permanently
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit user</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleImageUpload(user)}
+                                  className="hover:bg-green-50 hover:text-green-600"
+                                >
+                                  <Camera className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Upload profile image</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAddressUpdate(user)}
+                                  className="hover:bg-orange-50 hover:text-orange-600"
+                                >
+                                  <MapPin className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Add / edit address</TooltipContent>
+                            </Tooltip>
+
+                            {/* Role update button removed from Actions as it exists under Role & Status */}
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (userId) softDeleteMutation.mutate(userId);
+                                  }}
+                                  disabled={softDeleteMutation.isPending || !userId}
+                                  className="hover:bg-yellow-50 hover:text-yellow-600"
+                                >
+                                  {softDeleteMutation.isPending ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <UserX className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Soft delete</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => userId && unDeleteMutation.mutate(userId)}
+                                  disabled={unDeleteMutation.isPending || !userId}
+                                  className="hover:bg-green-50 hover:text-green-600"
+                                >
+                                  {unDeleteMutation.isPending ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Undelete</TooltipContent>
+                            </Tooltip>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="hover:bg-red-50 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the user account for <strong>{user.name || 'this user'}</strong> and remove all associated data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => {
+                                      if (userId) {
+                                        hardDeleteMutation.mutate(userId);
+                                      }
+                                    }}
+                                    disabled={!userId}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete Permanently
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1185,7 +1318,7 @@ export const Users: React.FC = () => {
                     console.error('Error rendering user row:', error, user);
                     return (
                       <TableRow key={user.id || user.userId || user.email}>
-                        <TableCell colSpan={4} className="text-center py-4 text-red-500">
+                        <TableCell colSpan={6} className="text-center py-4 text-red-500">
                           Error displaying user: {user.name || 'Unknown'}
                         </TableCell>
                       </TableRow>
@@ -1193,7 +1326,7 @@ export const Users: React.FC = () => {
                   }
                 }) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <UserX className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-500 font-medium">No users found</p>
                       <p className="text-gray-400 text-sm">
@@ -1499,16 +1632,7 @@ export const Users: React.FC = () => {
                   required
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="edit-address">Address</Label>
-                <Textarea
-                  id="edit-address"
-                  placeholder="Enter address (optional)"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  rows={3}
-                />
-              </div>
+              {/* Address excluded from update payload by requirement */}
             </div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
@@ -1584,10 +1708,10 @@ export const Users: React.FC = () => {
               </Button>
               <Button 
                 type="submit" 
-                disabled={updateImageMutation.isPending || !imageFile}
+                disabled={uploadImageMutation.isPending || !imageFile}
                 className="bg-green-600 hover:bg-green-700"
               >
-                {updateImageMutation.isPending ? (
+                {uploadImageMutation.isPending ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                     Uploading...
@@ -1604,69 +1728,128 @@ export const Users: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Address Update Dialog */}
+      {/* Address Add/Edit Dialog */}
       <Dialog open={isAddressUpdateOpen} onOpenChange={setIsAddressUpdateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleAddressSubmit}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-orange-600" />
-                Update Address
+                {addressForm.id ? 'Edit Address' : 'Add Address'}
               </DialogTitle>
               <DialogDescription>
-                Update the address for {selectedUser?.name || 'this user'}
+                {selectedUser?.name ? `Manage addresses for ${selectedUser.name}` : 'Manage addresses'}
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="address-input" className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Address
-                </Label>
-                <Textarea
-                  id="address-input"
-                  placeholder="Enter full address..."
-                  value={addressData}
-                  onChange={(e) => setAddressData(e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
-              
-              {selectedUser?.address && (
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <p className="text-sm font-medium text-gray-700 mb-1">Current Address:</p>
-                  <p className="text-sm text-gray-600">{selectedUser.address}</p>
+              {userAddresses.length > 0 && (
+                <div className="grid gap-2">
+                  <Label>Select existing address (optional)</Label>
+                  <Select value={addressSelectValue} onValueChange={(val) => {
+                    if (val === 'new') {
+                      setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
+                      setAddressSelectValue('new');
+                      return;
+                    }
+                    const addr = userAddresses.find((a) => String(a.id) === val);
+                    if (addr) {
+                      setAddressForm(addr);
+                      setAddressSelectValue(val);
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose address or create new" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userAddresses.map((a) => (
+                        <SelectItem key={a.id} value={String(a.id)}>
+                          {a.label} • {a.street}, {a.city}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="new">+ New address…</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="label">Label</Label>
+                  <Input id="label" value={addressForm.label} onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="postal">Postal Code</Label>
+                  <Input id="postal" value={addressForm.postalCode} onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="province">Province</Label>
+                <Select value={addressForm.province} onValueChange={(value) => setAddressForm({ ...addressForm, province: value, city: '' })}>
+                  <SelectTrigger id="province">
+                    <SelectValue placeholder="Select province" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NEPAL_PROVINCES.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="city">City</Label>
+                <Select value={addressForm.city} onValueChange={(value) => setAddressForm({ ...addressForm, city: value })} disabled={!addressForm.province}>
+                  <SelectTrigger id="city">
+                    <SelectValue placeholder={addressForm.province ? 'Select city' : 'Select province first'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getCitiesByProvince(addressForm.province).map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="street">Street</Label>
+                <Input id="street" value={addressForm.street} onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="lat">Latitude</Label>
+                  <Input id="lat" type="number" step="any" value={addressForm.latitude ?? ''} onChange={(e) => setAddressForm({ ...addressForm, latitude: e.target.value ? Number(e.target.value) : undefined })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="lng">Longitude</Label>
+                  <Input id="lng" type="number" step="any" value={addressForm.longitude ?? ''} onChange={(e) => setAddressForm({ ...addressForm, longitude: e.target.value ? Number(e.target.value) : undefined })} />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input id="isDefault" type="checkbox" className="h-4 w-4" checked={!!addressForm.isDefault} onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })} />
+                <Label htmlFor="isDefault">Set as default</Label>
+              </div>
             </div>
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setIsAddressUpdateOpen(false);
-                  setAddressData('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={updateAddressMutation.isPending || !addressData.trim()}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                {updateAddressMutation.isPending ? (
+              <Button type="button" variant="outline" onClick={() => {
+                setIsAddressUpdateOpen(false);
+                setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
+                setAddressSelectValue('new');
+              }}>Cancel</Button>
+              <Button type="submit" disabled={(addAddressMutation.isPending || updateAddressMutation.isPending) || !addressForm.street || !addressForm.province || !addressForm.city} className="bg-orange-600 hover:bg-orange-700">
+                {(addAddressMutation.isPending || updateAddressMutation.isPending) ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
+                    Saving...
                   </>
                 ) : (
                   <>
                     <MapPin className="w-4 h-4 mr-2" />
-                    Update Address
+                    {addressForm.id ? 'Update Address' : 'Add Address'}
                   </>
                 )}
               </Button>

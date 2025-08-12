@@ -48,7 +48,7 @@ export class BillingService extends BaseApiService {
   // Undelete bill (restore from soft delete)
   async unDeleteBill(id: number) {
     const response = await fetch(`${this.BASE_URL}/Billing/unDeleteBill?Id=${id}`, {
-      method: 'PUT',
+      method: 'DELETE',
       headers: this.getAuthHeaders()
     });
     return this.handleResponse<any>(response);

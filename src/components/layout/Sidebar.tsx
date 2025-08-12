@@ -59,7 +59,14 @@ const navigation = [
     ]
   },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
-  { name: 'Delivery Management', href: '/delivery-management', icon: Truck },
+  {
+    name: 'Delivery Management',
+    icon: Truck,
+    children: [
+      { name: 'Deliveries', href: '/delivery-management', icon: Truck },
+      { name: 'Shipping Management', href: '/shipping-management', icon: Truck },
+    ]
+  },
   {
     name: 'Store Management',
     icon: Store,
@@ -82,6 +89,7 @@ const navigation = [
     icon: Zap,
     children: [
       { name: 'Banner Events', href: '/banner-events', icon: Calendar },
+  { name: 'Promo Codes', href: '/promo-codes', icon: Receipt },
     ]
   },
   { name: 'Company Info', href: '/company-info', icon: Building },

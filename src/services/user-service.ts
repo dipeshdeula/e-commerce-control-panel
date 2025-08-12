@@ -1,5 +1,5 @@
 import { BaseApiService } from '@/shared/services/base-api';
-import { UserListDTO, Role, UpdateUserRoleResponse } from '@/types/api';
+import { UserListDTO } from '@/types/api';
 
 export class UserService extends BaseApiService {
   async getUsers(params: { page?: number; pageSize?: number; search?: string } = {}) {
@@ -29,8 +29,8 @@ export class UserService extends BaseApiService {
     return this.handleResponse<any>(response);
   }
 
-  // User registration (create new user)
-  async register(userData: { name: string; email: string; password: string; contact: string; address?: string }) {
+  // User registration (create new user) – address removed per requirements
+  async register(userData: { name: string; email: string; password: string; contact: string }) {
     const response = await fetch(`${this.BASE_URL}/auth/register`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -57,8 +57,8 @@ export class UserService extends BaseApiService {
     return result;
   }
 
-  // Update user
-  async updateUser(id: number, userData: { name: string; email: string; password?: string; contact: string; address?: string }) {
+  // Update user – address removed per requirements
+  async updateUser(id: number, userData: { name: string; email: string; password?: string; contact: string }) {
     const response = await fetch(`${this.BASE_URL}/user/updateUser?id=${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
@@ -128,30 +128,70 @@ export class UserService extends BaseApiService {
     return result;
   }
 
-  // Update user image
-  async updateUserImage(userId: number, formData: FormData) {
-    const response = await fetch(`${this.BASE_URL}/user/updateUserImage?id=${userId}`, {
-      method: 'PUT',
+  // Upload user image – as multipart/form-data, expects field name 'file' and POST to /user/upload?userId=
+  async uploadUserImage(userId: number, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${this.BASE_URL}/user/upload?userId=${userId}`, {
+      method: 'POST',
       headers: this.getFormHeaders(),
-      body: formData
+      body: formData,
     });
-    
+
     const result = await this.handleResponse<{ message: string }>(response);
     if (!result.success) {
-      throw new Error(result.message || 'Failed to update user image');
+      throw new Error(result.message || 'Failed to upload user image');
     }
     return result;
   }
 
-  // Update user address
-  async updateUserAddress(userId: number, addressData: { address: string }) {
-    const response = await fetch(`${this.BASE_URL}/user/updateUserAddress?id=${userId}`, {
+  // Add user address – POST /address/add?UserId=
+  async addUserAddress(
+    userId: number,
+    address: {
+      label: string;
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+      latitude?: number;
+      longitude?: number;
+      isDefault?: boolean;
+    }
+  ) {
+    const response = await fetch(`${this.BASE_URL}/address/add?UserId=${userId}`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(address),
+    });
+    const result = await this.handleResponse<any>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to add user address');
+    }
+    return result;
+  }
+
+  // Update user address – PUT /address/updateAddress?id=
+  async updateUserAddress(
+    addressId: number,
+    address: {
+      label: string;
+      street: string;
+      city: string;
+      province: string;
+      postalCode: string;
+      latitude?: number;
+      longitude?: number;
+      isDefault?: boolean;
+    }
+  ) {
+    const response = await fetch(`${this.BASE_URL}/address/updateAddress?id=${addressId}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(addressData)
+      body: JSON.stringify(address),
     });
-    
-    const result = await this.handleResponse<{ message: string }>(response);
+    const result = await this.handleResponse<any>(response);
     if (!result.success) {
       throw new Error(result.message || 'Failed to update user address');
     }

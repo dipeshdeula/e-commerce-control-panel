@@ -16,6 +16,8 @@ import { NotificationService } from './notification-service';
 import { SubCategoryService } from './subCategory-service';
 import { SubSubCategoryService } from './subSubCategory-service';
 import { DeliveryService } from './delivery-service';
+import { PromoCodeService } from './promo-code-service';
+import { ShippingService } from './shipping-service';
 
 class ApiService extends BaseApiService {
   private authService = new AuthService();
@@ -35,6 +37,8 @@ class ApiService extends BaseApiService {
   private transactionService = new TransactionService();
   private notificationService = new NotificationService();
   private deliveryService = new DeliveryService();
+  private promoCodeService = new PromoCodeService();
+  private shippingService = new ShippingService();
 
   // Auth methods
   login = this.authService.login.bind(this.authService);
@@ -52,9 +56,9 @@ class ApiService extends BaseApiService {
   //updateUserRole = this.userService.updateUserRole.bind(this.userService);
   updateUser = this.userService.updateUser.bind(this.userService);
   updateUserRole = this.userService.updateUserRole.bind(this.userService);
-  updateUserImage = this.userService.updateUserImage.bind(this.userService);
+  uploadUserImage = this.userService.uploadUserImage.bind(this.userService);
+  addUserAddress = this.userService.addUserAddress.bind(this.userService);
   updateUserAddress = this.userService.updateUserAddress.bind(this.userService);
-  //uploadUserImage = this.userService.uploadUserImage.bind(this.userService);
   softDeleteUser = this.userService.softDeleteUser.bind(this.userService);
   hardDeleteUser = this.userService.hardDeleteUser.bind(this.userService);
   unDeleteUser = this.userService.unDeleteUser.bind(this.userService);
@@ -88,6 +92,8 @@ class ApiService extends BaseApiService {
 
   // Product Management
   getProducts = this.productService.getProducts.bind(this.productService);
+  getAllProductsAdmin = this.productService.getAllProductsAdmin.bind(this.productService);
+  getProductsWithDynamicPricing = this.productService.getProductsWithDynamicPricing.bind(this.productService);
   getProductsBySubSubCategoryId = this.productService.getProductsBySubSubCategoryId.bind(this.productService);
   getProductsByCategoryId = this.productService.getProductsByCategoryId.bind(this.productService);
   getProductById = this.productService.getProductById.bind(this.productService);
@@ -201,6 +207,24 @@ class ApiService extends BaseApiService {
   updateDeliveryStatus = this.deliveryService.updateDeliveryStatus.bind(this.deliveryService);
   assignDelivery = this.deliveryService.assignDelivery.bind(this.deliveryService);
   getDeliveryHistory = this.deliveryService.getDeliveryHistory.bind(this.deliveryService);
+
+  // Promo Code Management
+  createPromoCode = this.promoCodeService.createPromoCode.bind(this.promoCodeService);
+  updatePromoCode = this.promoCodeService.updatePromoCode.bind(this.promoCodeService);
+  activatePromoCode = this.promoCodeService.activatePromoCode.bind(this.promoCodeService);
+  deactivatePromoCode = this.promoCodeService.deactivatePromoCode.bind(this.promoCodeService);
+  softDeletePromoCode = this.promoCodeService.softDeletePromoCode.bind(this.promoCodeService);
+  unDeletePromoCode = this.promoCodeService.unDeletePromoCode.bind(this.promoCodeService);
+  hardDeletePromoCode = this.promoCodeService.hardDeletePromoCode.bind(this.promoCodeService);
+  getAllPromoCodes = this.promoCodeService.getAllPromoCodes.bind(this.promoCodeService);
+
+  // Shipping Management
+  createShippingConfiguration = this.shippingService.createShippingConfiguration.bind(this.shippingService);
+  updateShippingConfiguration = this.shippingService.updateShippingConfiguration.bind(this.shippingService);
+  setDefaultShippingConfiguration = this.shippingService.setDefaultShippingConfiguration.bind(this.shippingService);
+  softDeleteShippingConfiguration = this.shippingService.softDeleteShippingConfiguration.bind(this.shippingService);
+  hardDeleteShippingConfiguration = this.shippingService.hardDeleteShippingConfiguration.bind(this.shippingService);
+  getAllShippingConfigurations = this.shippingService.getAllShippingConfigurations.bind(this.shippingService);
 }
 
 export const apiService = new ApiService();

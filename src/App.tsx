@@ -27,6 +27,8 @@ import { Notifications } from "@/pages/Notifications";
 import { CompanyInfo } from "@/pages/CompanyInfo";
 import { Reports } from "@/pages/Reports";
 import NotFound from "./pages/NotFound";
+import PromoCodes from "@/pages/PromoCodes";
+import ShippingManagement from "@/pages/ShippingManagement";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { useAppSelector } from "./store";
 import { Loader2 } from "lucide-react";
@@ -167,6 +169,16 @@ const AppContent = () => {
         }
       />
       <Route
+        path="/shipping-management"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ShippingManagement />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/stores"
         element={
           <ProtectedRoute>
@@ -232,6 +244,16 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <BannerEvents />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/promo-codes"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PromoCodes />
             </Layout>
           </ProtectedRoute>
         }

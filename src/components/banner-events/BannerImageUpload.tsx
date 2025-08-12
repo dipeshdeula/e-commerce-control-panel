@@ -37,6 +37,11 @@ export const BannerImageUpload: React.FC<BannerImageUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  // Debug logging for existing images
+  console.log('BannerImageUpload - existingImages:', existingImages);
+  console.log('BannerImageUpload - eventId:', eventId);
+  console.log('BannerImageUpload - eventName:', eventName);
+
   const uploadMutation = useMutation({
     mutationFn: (files: File[]) => apiService.uploadBannerImages(eventId, files),
     onSuccess: (data: any) => {
@@ -211,11 +216,15 @@ export const BannerImageUpload: React.FC<BannerImageUploadProps> = ({
               <CardContent>
                 <div className="grid grid-cols-3 gap-3">
                   {existingImages.map((image, index) => (
-                    <div key={index} className="relative">
+                    <div key={image.id || index} className="relative">
                       <img
-                        src={image.imageUrl}
+                        src={image.imageUrl?.startsWith('http') ? image.imageUrl : `/${image.imageUrl}`}
                         alt={`Banner ${index + 1}`}
                         className="w-full h-24 object-cover rounded border"
+                        onError={(e) => {
+                          console.error('Failed to load image:', image.imageUrl);
+                          e.currentTarget.src = '/placeholder.svg';
+                        }}
                       />
                       <Badge 
                         variant="secondary" 

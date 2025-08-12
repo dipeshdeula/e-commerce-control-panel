@@ -4,7 +4,7 @@ import { ProductDTO } from '@/types/api';
 
 export class ProductService extends BaseApiService {
   
-  // Get all products with pagination
+  // Get all products with pagination (for customer view - active products only)
   async getProducts(params: { page?: number; pageSize?: number } = {}) {
     let url = `${this.BASE_URL}/products/getAllProducts`;
     const { page = 1, pageSize = 10 } = params;
@@ -22,6 +22,60 @@ export class ProductService extends BaseApiService {
     const result = await this.handleResponse<ProductDTO[]>(response);
     if (!result.success) {
       throw new Error(result.message || 'Failed to fetch products');
+    }
+    return result;
+  }
+
+  // Admin endpoint: Get all products (both active and inactive) 
+  async getAllProductsAdmin(params: { 
+    page?: number; 
+    pageSize?: number; 
+    includeInactive?: boolean 
+  } = {}) {
+    let url = `${this.BASE_URL}/products/admin/getAllProducts`;
+    const { page = 1, pageSize = 10, includeInactive = true } = params;
+
+    const queryParams = new URLSearchParams();
+    queryParams.append('PageNumber', page.toString());
+    queryParams.append('PageSize', pageSize.toString());
+    queryParams.append('includeInactive', includeInactive.toString());
+
+    url += `?${queryParams.toString()}`;
+    
+    const response = await fetch(url, {
+      headers: this.getAuthHeaders()
+    });
+    console.log("admin products:", response);
+    const result = await this.handleResponse<ProductDTO[]>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to fetch admin products');
+    }
+    return result;
+  }
+
+  // Get products with dynamic pricing (considering active banner events)
+  async getProductsWithDynamicPricing(params: { 
+    page?: number; 
+    pageSize?: number; 
+    includeEventPricing?: boolean 
+  } = {}) {
+    let url = `${this.BASE_URL}/products/getAllProductsWithEventPricing`;
+    const { page = 1, pageSize = 10, includeEventPricing = true } = params;
+
+    const queryParams = new URLSearchParams();
+    queryParams.append('PageNumber', page.toString());
+    queryParams.append('PageSize', pageSize.toString());
+    queryParams.append('includeEventPricing', includeEventPricing.toString());
+
+    url += `?${queryParams.toString()}`;
+    
+    const response = await fetch(url, {
+      headers: this.getAuthHeaders()
+    });
+    console.log("products with dynamic pricing:", response);
+    const result = await this.handleResponse<ProductDTO[]>(response);
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to fetch products with dynamic pricing');
     }
     return result;
   }
