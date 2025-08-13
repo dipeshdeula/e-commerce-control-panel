@@ -22,6 +22,7 @@ import { PaymentRequests } from "@/pages/PaymentRequests";
 import { Billing } from "@/pages/Billing";
 import BannerEvents from "@/pages/BannerEvents";
 import DeliveryManagement from "@/pages/DeliveryManagement";
+import ServiceArea from "@/pages/ServiceArea";
 import { Settings } from "@/pages/Settings";
 import { Notifications } from "@/pages/Notifications";
 import { CompanyInfo } from "@/pages/CompanyInfo";
@@ -154,6 +155,16 @@ const AppContent = () => {
           <ProtectedRoute>
             <Layout>
               <Orders />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/service-area"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ServiceArea />
             </Layout>
           </ProtectedRoute>
         }

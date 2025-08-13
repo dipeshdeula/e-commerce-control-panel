@@ -1234,7 +1234,19 @@ export const Users: React.FC = () => {
                               <TooltipContent>Add / edit address</TooltipContent>
                             </Tooltip>
 
-                            {/* Role update button removed from Actions as it exists under Role & Status */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRoleUpdate(user)}
+                                  className="hover:bg-purple-50 hover:text-purple-600"
+                                >
+                                  <Settings className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Update role</TooltipContent>
+                            </Tooltip>
 
                             <Tooltip>
                               <TooltipTrigger asChild>

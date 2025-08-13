@@ -134,7 +134,7 @@ export class UserService extends BaseApiService {
     formData.append('file', file);
 
     const response = await fetch(`${this.BASE_URL}/user/upload?userId=${userId}`, {
-      method: 'POST',
+      method: 'PUT',
       headers: this.getFormHeaders(),
       body: formData,
     });

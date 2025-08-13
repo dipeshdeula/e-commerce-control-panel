@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -26,7 +25,8 @@ import {
   Receipt,
   Zap,
   Calendar,
-  Truck
+  Truck,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -60,11 +60,12 @@ const navigation = [
   },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
   {
-    name: 'Delivery Management',
-    icon: Truck,
+    name: 'Service Area',
+    icon: MapPin,
     children: [
-      { name: 'Deliveries', href: '/delivery-management', icon: Truck },
-      { name: 'Shipping Management', href: '/shipping-management', icon: Truck },
+      { name: 'Service Area', href: '/service-area', icon: MapPin },
+      { name: 'Delivery', href: '/delivery-management', icon: Truck },
+      { name: 'Shipping', href: '/shipping-management', icon: Truck },
     ]
   },
   {

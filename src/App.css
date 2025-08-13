@@ -40,3 +40,34 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Custom thin, gradient blue scrollbar styles for all scrollable areas */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 60%, #2563eb 100%);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #e0e7ff;
+  border-radius: 4px;
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #60a5fa #e0e7ff;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+  background: #e0e7ff;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 60%, #2563eb 100%);
+  border-radius: 4px;
+}
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #60a5fa #e0e7ff;
+}

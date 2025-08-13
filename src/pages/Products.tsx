@@ -109,17 +109,36 @@ const Products = () => {
     subSubCategoryId: ''
   });
 
+  const [includeDeleted, setIncludeDeleted] = useState('all');
+  const [onSaleOnly, setOnSaleOnly] = useState('all');
+  const [prioritizeEventProducts, setPrioritizeEventProducts] = useState('all');
+
   const queryClient = useQueryClient();
 
-  // Fetch products
-  const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ['products', currentPage, pageSize, searchTerm],
-    queryFn: () => api.getAllProductsAdmin({ 
-      page: currentPage, 
-      size: pageSize,
-      searchTerm: searchTerm || undefined
-    }),
-    placeholderData: (previousData) => previousData
+  // Fetch products using ProductService and correct param names
+  const { data: productsData, isLoading, refetch } = useQuery({
+    queryKey: ['products', currentPage, pageSize, searchTerm, includeDeleted, onSaleOnly, prioritizeEventProducts],
+    queryFn: async () => {
+      // Match backend param names (PageNumber, PageSize, etc)
+      const params: any = {
+        pageNumber: currentPage,
+        pageSize,
+        searchTerm: searchTerm || undefined,
+        includeDeleted: includeDeleted !== 'all' ? includeDeleted === 'true' : undefined,
+        onSaleOnly: onSaleOnly !== 'all' ? onSaleOnly === 'true' : undefined,
+        prioritizeEventProducts: prioritizeEventProducts !== 'all' ? prioritizeEventProducts === 'true' : undefined,
+      };
+      // Remove undefined params
+      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+      // Use ProductService
+      const result = await api.getProducts(params);
+      // Defensive: result.data may be undefined/null
+      if (!result || !result.data) {
+        console.warn('No products data returned:', result);
+        return { data: [], pagination: result?.pagination || {} };
+      }
+      return result;
+    }
   });
 
   // Fetch sub-sub-categories for dropdown
@@ -142,7 +161,7 @@ const Products = () => {
     queryFn: () => api.getCategories({ page: 1, pageSize: 100 }),
   });
 
-  console.log("Products data:", products);
+  console.log("Products data:", productsData);
   console.log("SubSubCategories data:", subSubCategories);
   console.log("SubSubCategories loading:", subSubCategoriesLoading);
   console.log("SubSubCategories error:", subSubCategoriesError);
@@ -460,10 +479,9 @@ const Products = () => {
   const handleGoToPage = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const page = parseInt(goToPage);
-      const totalPages = products?.data?.totalCount ? 
-        Math.ceil(products.data.totalCount / pageSize) : 1;
+      const totalPages = productsData?.pagination?.totalPages || 1;
       
-      if (page >= 1 && (!products?.data?.totalCount || page <= totalPages)) {
+      if (page >= 1 && (!productsData?.pagination?.totalCount || page <= totalPages)) {
         setCurrentPage(page);
         setGoToPage('');
       }
@@ -481,10 +499,13 @@ const Products = () => {
   };
 
   // Calculate pagination info
-  const totalItems = products?.data?.totalCount || 0;
-  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 1;
-  const paginatedProducts = products?.data?.data || [];
-  const hasMorePages = paginatedProducts.length === pageSize;
+  const pagedList = Array.isArray(productsData?.data?.data) ? productsData.data.data : [];
+  const totalCount = productsData?.pagination?.totalCount || 0;
+  const totalPages = productsData?.pagination?.totalPages || 1;
+  const hasNextPage = productsData?.pagination?.hasNextPage || false;
+  const hasPreviousPage = productsData?.pagination?.hasPreviousPage || false;
+
+  console.log("Paged list:", pagedList);
 
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
@@ -655,15 +676,6 @@ const Products = () => {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Search className="w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="max-w-sm border-gray-200 focus:border-blue-400"
-          />
-        </div>
-        <div className="flex items-center space-x-2">
           <Label htmlFor="pageSize" className="text-sm font-medium">Show:</Label>
           <Select value={pageSize.toString()} onValueChange={(value) => handlePageSizeChange(Number(value))}>
             <SelectTrigger className="w-20">
@@ -678,9 +690,9 @@ const Products = () => {
             </SelectContent>
           </Select>
           <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-            {totalItems > 0 
-              ? `${totalItems} total products`
-              : `${paginatedProducts.length} products on this page`
+            {totalCount > 0 
+              ? `${totalCount} total products`
+              : `${pagedList.length} products on this page`
             }
           </Badge>
         </div>
@@ -688,284 +700,185 @@ const Products = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Products
-          </CardTitle>
-          <CardDescription>
-            Manage your product inventory<br/>
-            <span className="text-sm text-gray-500">MP: Market Price<br />DP: Discount Price</span>
-          </CardDescription>
+          <CardTitle>Product List</CardTitle>
+          <div className="flex flex-wrap gap-4 items-center mt-2 rounded-lg p-4 shadow-sm">
+            <Input
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={e => handleSearch(e.target.value)}
+              className="w-64 border-blue-200 focus:border-blue-500 shadow-sm"
+            />
+            <span className="font-medium text-gray-700">Show:</span>
+            <Select value={pageSize.toString()} onValueChange={v => handlePageSizeChange(Number(v))}>
+              <SelectTrigger className="w-16 border-blue-200 focus:border-blue-500">
+                <SelectValue placeholder={pageSize.toString()} />
+              </SelectTrigger>
+              <SelectContent>
+                {[5, 10, 25, 50, 100].map(size => (
+                  <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="font-medium text-gray-700">Include Deleted:</span>
+            <Select value={includeDeleted} onValueChange={setIncludeDeleted}>
+              <SelectTrigger className="w-20 border-blue-200 focus:border-blue-500">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="font-medium text-gray-700">On Sale Only:</span>
+            <Select value={onSaleOnly} onValueChange={setOnSaleOnly}>
+              <SelectTrigger className="w-20 border-blue-200 focus:border-blue-500">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="font-medium text-gray-700">Prioritize Event:</span>
+            <Select value={prioritizeEventProducts} onValueChange={setPrioritizeEventProducts}>
+              <SelectTrigger className="w-20 border-blue-200 focus:border-blue-500">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem value="false">No</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 ml-2">
+              {totalCount > 0 
+                ? `${totalCount} total products`
+                : `${pagedList.length} products on this page`
+              }
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-gray-50">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[1200px]">
+              <TableHeader>
                 <TableRow>
-                  <TableHead className="font-semibold">Id</TableHead>
-                  <TableHead className="font-semibold">Image</TableHead>
-                  <TableHead className="font-semibold">Product</TableHead>
-                  <TableHead className="font-semibold">Category</TableHead>
-                  <TableHead className="font-semibold">SKU</TableHead>
-                  <TableHead className="font-semibold">Price</TableHead>
-                  <TableHead className="font-semibold">Stock</TableHead>
-                  <TableHead className="font-semibold">Rating</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Stock Qty</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-            <TableBody>
-              {paginatedProducts.map((product) => (
-                <TableRow key={product.id} className={product.isDeleted ? 'opacity-60 bg-red-50' : ''}>
-                   <TableCell>
-                    <div>
-                      <div className="font-medium">#{product.id}</div>                     
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    {product.images && product.images.length > 0 ? (
-                      <img 
-                        src={`${API_BASE_URL}/${product.images[0].imageUrl}`} 
-                        alt={product.name}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                        <Package className="w-6 h-6 text-gray-400" />
-                      </div>
-                    )}
-                  </TableCell>
-                   
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      {product.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
-                      )}
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">null</div>                      
-                    </div>
-                  </TableCell>
-
-
-                  <TableCell>
-                    <code className="text-sm bg-gray-100 px-2 py-1 rounded">{product.sku}</code>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="text-sm font-medium"> MP: Rs.{product.marketPrice}</div>
-                       <div className="text-smfont-medium text-gray-600"> CP: Rs.{product.costPrice}</div>
-                      {product.discountPrice > 0 && (
-                        <div className="text-sm font-medium text-green-600">DP: Rs.{product.discountPrice}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.stockQuantity > 0 ? "default" : "destructive"}>
-                      {product.stockQuantity} in stock
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span>{product.rating || 0}</span>
-                      <span className="text-gray-400">({product.reviewCount || 0})</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.isDeleted ? "destructive" : "default"}>
-                      {product.isDeleted ? 'Deleted' : 'Active'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <TooltipProvider>
-                      <div className="flex items-center gap-1">
-                        {!product.isDeleted ? (
-                          <>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
-                                  onClick={() => handleEdit(product)}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Edit Product</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                                  onClick={() => handleImageUpload(product)}
-                                >
-                                  <Upload className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Upload Images</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 hover:bg-orange-50 hover:text-orange-600"
-                                  onClick={() => softDeleteMutation.mutate(product.id)}
-                                  disabled={softDeleteMutation.isPending}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Move to Trash (Soft Delete)</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </>
-                        ) : (
+              <TableBody>
+                {pagedList.map((product: any) => {                
+                  const isActive = product.statusBadge === 'ACTIVE' || product.isActive;
+                  const isOnSale = product.isOnSale;
+                  const isInStock = product.isInStock;
+                  return (
+                    <TableRow key={product.id} className="hover:bg-blue-50 transition-all">
+                      <TableCell className="font-bold">#{product.id}</TableCell>
+                      <TableCell>{product.name || product.productName}</TableCell>
+                      <TableCell>{product.sku}</TableCell>
+                      <TableCell>{product.description}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-500">Maket Price: {product.formattedMarketPrice || product.marketPrice}</span>
+                          <span className="text-xs text-gray-500">Cost Price: Rs.{product.costPrice}</span>
+                          <span className="text-xs text-gray-500">Discount Price: Rs.{product.discountPrice}</span>
+                          <span className="text-xs text-gray-500">Discount Percentage: {product.discountPercentage} %</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{product.stockQuantity ?? product.stock ?? '-'}</TableCell>
+                      <TableCell>
+                        <Badge className={isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                          {isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                        {isOnSale && (
+                          <Badge className="ml-1 bg-yellow-100 text-yellow-700">On Sale</Badge>
+                        )}
+                        {isInStock && (
+                          <Badge className="ml-1 bg-blue-100 text-blue-700">In Stock</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{product.pricing?.activeEventName || product.activeEventName || '-'}</TableCell>
+                      <TableCell className="flex gap-2">
+                        <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
-                                onClick={() => restoreMutation.mutate(product.id)}
-                                disabled={restoreMutation.isPending}
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </Button>
+                              <Button variant="outline" size="sm" className="mr-1" onClick={() => handleEdit(product)}><Edit className="w-4 h-4" /></Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Restore Product</p>
-                            </TooltipContent>
+                            <TooltipContent>Edit</TooltipContent>
                           </Tooltip>
-                        )}
-                        
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                              onClick={() => hardDeleteMutation.mutate(product.id)}
-                              disabled={hardDeleteMutation.isPending}
-                            >
-                              <AlertTriangle className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Permanently Delete</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TooltipProvider>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
-                {products?.data?.totalCount ? (
-                  <>
-                    Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to{' '}
-                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} products
-                  </>
-                ) : (
-                  <>
-                    Showing {paginatedProducts.length} products on page {currentPage}
-                    {hasMorePages ? ' (more pages available)' : ''}
-                  </>
-                )}
-              </div>
-              {(totalPages > 1 || hasMorePages) && (
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="goToPage" className="text-sm">Go to page:</Label>
-                  <Input
-                    id="goToPage"
-                    type="number"
-                    min="1"
-                    max={products?.data?.totalCount ? totalPages : undefined}
-                    value={goToPage}
-                    onChange={(e) => setGoToPage(e.target.value)}
-                    onKeyDown={handleGoToPage}
-                    placeholder={products?.data?.totalCount ? `1-${totalPages}` : 'Enter page'}
-                    className="w-20 h-8 text-sm"
-                  />
-                </div>
-              )}
-            </div>
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPage > 1) setCurrentPage(prev => prev - 1);
-                    }}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-
-                {/* Simple pagination */}
-                {Array.from({ length: Math.min(5, totalPages || 1) }, (_, i) => {
-                  const pageNumber = i + 1;
-                  return (
-                    <PaginationItem key={pageNumber}>
-                      <PaginationLink 
-                        href="#" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(pageNumber);
-                        }}
-                        isActive={currentPage === pageNumber}
-                        className="cursor-pointer"
-                      >
-                        {pageNumber}
-                      </PaginationLink>
-                    </PaginationItem>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="mr-1" onClick={() => softDeleteMutation.mutate(product.id)}><Trash2 className="w-4 h-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Soft Delete</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="mr-1" onClick={() => restoreMutation.mutate(product.id)} disabled={!product.isDeleted}><RotateCcw className="w-4 h-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Restore</TooltipContent>
+                          </Tooltip>                         
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-
-                <PaginationItem>
-                  <PaginationNext 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (products?.data?.totalCount) {
-                        if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
-                      } else {
-                        if (hasMorePages) setCurrentPage(prev => prev + 1);
-                      }
-                    }}
-                    className={
-                      products?.data?.totalCount 
-                        ? (currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
-                        : (!hasMorePages ? 'pointer-events-none opacity-50' : 'cursor-pointer')
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-700">
+              Showing <span className="font-medium">{pagedList.length ? ((currentPage - 1) * pageSize + 1) : 0}</span> to{' '}
+              <span className="font-medium">{pagedList.length ? ((currentPage - 1) * pageSize + pagedList.length) : 0}</span> of{' '}
+              <span className="font-medium">{totalCount}</span> entries
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={goToPage}
+                onChange={e => setGoToPage(e.target.value)}
+                className="w-16 h-8 text-center"
+                placeholder={`${currentPage}`}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const page = Number(goToPage);
+                  if (page >= 1 && page <= totalPages) setCurrentPage(page);
+                }}
+                disabled={!goToPage || Number(goToPage) < 1 || Number(goToPage) > totalPages}
+              >Go</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span>{currentPage}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
