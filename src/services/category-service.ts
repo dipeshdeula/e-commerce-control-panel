@@ -89,6 +89,25 @@ export class CategoryService extends BaseApiService {
     return result;
   }
 
+    async getSubCategoriesByCategoryId(categoryId: number, pageNumber: number = 1, pageSize: number = 10) {
+      const url = `${this.BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${categoryId}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
+      const response = await fetch(url, { headers: this.getAuthHeaders() });
+      const result = await this.handleResponse<any>(response);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch subcategories');
+      }
+      return result;
+    }
+
+    async getSubSubCategoriesByCategoryId(categoryId: number, pageNumber: number = 1, pageSize: number = 10) {
+      const url = `${this.BASE_URL}/category/getAllSubSubCategoryByCategoryId?categoryId=${categoryId}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
+      const response = await fetch(url, { headers: this.getAuthHeaders() });
+      const result = await this.handleResponse<any>(response);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch subsubcategories');
+      }
+      return result;
+    }
   async unDeleteCategory(id: number) {
     const response = await fetch(`${this.BASE_URL}/category/unDeleteCategory?categoryId=${id}`, {
       method: 'DELETE',

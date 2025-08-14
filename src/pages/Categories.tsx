@@ -452,7 +452,8 @@ export const Categories: React.FC = () => {
                         <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
                           {category.imageUrl ? (
                             <img 
-                              src={`${BASE_URL}/${category.imageUrl}`} 
+                              // src={`${BASE_URL}/${category.imageUrl}`} 
+                              src={`${category.imageUrl}`}
                               alt={category.name}
                               className="w-full h-full rounded-lg object-cover"
                             />

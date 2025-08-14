@@ -106,12 +106,17 @@ const Products = () => {
     sku: '',
     weight: '',
     dimensions: '',
+    categoryId:'',
+    subCategoryId:'',
     subSubCategoryId: ''
+
   });
 
   const [includeDeleted, setIncludeDeleted] = useState('all');
   const [onSaleOnly, setOnSaleOnly] = useState('all');
   const [prioritizeEventProducts, setPrioritizeEventProducts] = useState('all');
+  const [subCategoriesForCategory, setSubCategoriesForCategory] = useState([]);
+  const [subSubCategoriesForCategory, setSubSubCategoriesForCategory] = useState([]);
 
   const queryClient = useQueryClient();
 
@@ -277,6 +282,8 @@ const Products = () => {
       sku: '',
       weight: '',
       dimensions: '',
+      categoryId: '',
+      subCategoryId: '',
       subSubCategoryId: ''
     });
     setOpenSubSubCategory(false);
@@ -456,6 +463,8 @@ const Products = () => {
       sku: product.sku,
       weight: product.weight || '',
       dimensions: product.dimensions || '',
+      categoryId: product.categoryId?.toString() || '',
+      subCategoryId: product.subCategoryId?.toString() || '',
       subSubCategoryId: product.subSubCategoryId?.toString() || ''
     });
     setIsEditOpen(true);
@@ -507,6 +516,26 @@ const Products = () => {
 
   console.log("Paged list:", pagedList);
 
+  useEffect(() => {
+    if (formData.categoryId) {
+      // Fetch subcategories for selected category
+      fetch(`${API_BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${formData.categoryId}&pageNumber=1&pageSize=100`)
+        .then(res => res.json())
+        .then(result => {
+          setSubCategoriesForCategory(result?.data?.subCategories || []);
+        });
+      // Fetch subsubcategories for selected category
+      fetch(`${API_BASE_URL}/category/getAllSubSubCategoryByCategoryId?categoryId=${formData.categoryId}&pageNumber=1&pageSize=100`)
+        .then(res => res.json())
+        .then(result => {
+          setSubSubCategoriesForCategory(result?.data?.subSubCategories || []);
+        });
+    } else {
+      setSubCategoriesForCategory([]);
+      setSubSubCategoriesForCategory([]);
+    }
+  }, [formData.categoryId]);
+
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
   }
@@ -541,7 +570,7 @@ const Products = () => {
                   <DialogDescription>Add a new product to your inventory</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="name">Product Name</Label>
                       <Input
@@ -563,46 +592,78 @@ const Products = () => {
                       />
                     </div>
                   </div>
-                  <div className="grid gap-2">
+                   <div className="grid gap-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="subSubCategoryId">Sub-SubCategory</Label>
-                      <Select value={formData.subSubCategoryId} onValueChange={(value)=>setFormData({...formData,subSubCategoryId:value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sub-subcategory" />
-                      </SelectTrigger>
+                      <Label htmlFor="categoryId">Category</Label>
+                      <Select value={formData.categoryId} onValueChange={value => {
+                        setFormData({ ...formData, categoryId: value, subCategoryId: '', subSubCategoryId: '' });
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
                         <SelectContent>
-                          {subSubCategories?.data?.data?.map((subSubCategory : any) => (
-                            <SelectItem
-                              key={subSubCategory.id}
-                              value={subSubCategory.id.toString()}
-                            >
-                              {subSubCategory.name}
-                             
+                          {Array.isArray(categories?.data)
+                            ? categories.data.map((cat: any) => (
+                                <SelectItem key={cat.id || cat.categoryId} value={(cat.id || cat.categoryId).toString()}>
+                                  {cat.name} (ID: {cat.id || cat.categoryId})
+                                </SelectItem>
+                              ))
+                            : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="subCategoryId">SubCategory</Label>
+                      <Select value={formData.subCategoryId} onValueChange={value => setFormData({ ...formData, subCategoryId: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subcategory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subCategoriesForCategory.map((sub: any) => (
+                            <SelectItem key={sub.id || sub.subCategoryId} value={(sub.id || sub.subCategoryId).toString()}>
+                              {sub.name} (ID: {sub.id || sub.subCategoryId})
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      
-                    </div>                    
-                    
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="subSubCategoryId">Sub-SubCategory</Label>
+                      <Select value={formData.subSubCategoryId} onValueChange={value => setFormData({ ...formData, subSubCategoryId: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sub-subcategory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subSubCategoriesForCategory.map((subsub: any) => (
+                            <SelectItem key={subsub.id || subsub.subSubCategoryId} value={(subsub.id || subsub.subSubCategoryId).toString()}>
+                              {subsub.name} (ID: {subsub.id || subsub.subSubCategoryId})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="weight">Weight</Label>
-                    <Input
-                      id="weight"
-                      value={formData.weight}
-                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                      placeholder="Enter weight (e.g., 1kg, 500g)"
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="weight">Weight</Label>
+                      <Input
+                        id="weight"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                        placeholder="Enter weight (e.g., 1kg, 500g)"
+                      />
+                    </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="dimensions">Dimensions</Label>
-                    <Input
-                      id="dimensions"
-                      value={formData.dimensions}
-                      onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-                      placeholder="Enter dimensions (e.g., 10x5x2 cm)"
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="dimensions">Dimensions</Label>
+                      <Input
+                        id="dimensions"
+                        value={formData.dimensions}
+                        onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                        placeholder="Enter dimensions (e.g., 10x5x2 cm)"
+                      />
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Description</Label>

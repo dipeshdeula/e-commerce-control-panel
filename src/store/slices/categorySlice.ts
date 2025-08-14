@@ -49,13 +49,15 @@ export const createCategory = createAsyncThunk(
 );
 
 // Subcategories
-export const fetchSubcategories = createAsyncThunk(
-  'categories/fetchSubcategories',
-  async (_, { rejectWithValue }) => {
+
+// Fetch subcategories by categoryId
+export const fetchSubcategoriesByCategoryId = createAsyncThunk(
+  'categories/fetchSubcategoriesByCategoryId',
+  async (categoryId: number, { rejectWithValue }) => {
     try {
-      const response = await apiService.getSubCategories();
+      const response = await apiService.getSubCategoriesByCategoryId(categoryId);
       if (response.success && response.data) {
-        return response.data;
+        return response.data.subCategories;
       }
       return rejectWithValue(response.message || 'Failed to fetch subcategories');
     } catch (error: any) {
@@ -65,15 +67,17 @@ export const fetchSubcategories = createAsyncThunk(
 );
 
 // Sub-subcategories
-export const fetchSubsubcategories = createAsyncThunk(
-  'categories/fetchSubsubcategories',
-  async (_, { rejectWithValue }) => {
+
+// Fetch subsubcategories by categoryId
+export const fetchSubSubCategoriesByCategoryId = createAsyncThunk(
+  'categories/fetchSubSubCategoriesByCategoryId',
+  async (categoryId: number, { rejectWithValue }) => {
     try {
-      const response = await apiService.getSubSubCategories();
+      const response = await apiService.getSubSubCategoriesByCategoryId(categoryId);
       if (response.success && response.data) {
-        return response.data;
+        return response.data.subSubCategories;
       }
-      return rejectWithValue(response.message || 'Failed to fetch sub-subcategories');
+      return rejectWithValue(response.message || 'Failed to fetch subsubcategories');
     } catch (error: any) {
       return rejectWithValue(error.message || 'Network error');
     }
@@ -107,13 +111,31 @@ const categorySlice = createSlice({
         state.categories.push(action.payload);
       })
       // Subcategories
-      .addCase(fetchSubcategories.fulfilled, (state, action) => {
-        state.subcategories = action.payload;
-      })
+        .addCase(fetchSubcategoriesByCategoryId.pending, (state) => {
+          state.loading = true;
+          state.error = null;
+        })
+        .addCase(fetchSubcategoriesByCategoryId.fulfilled, (state, action) => {
+          state.loading = false;
+          state.subcategories = action.payload;
+        })
+        .addCase(fetchSubcategoriesByCategoryId.rejected, (state, action) => {
+          state.loading = false;
+          state.error = action.payload as string;
+        })
       // Sub-subcategories
-      .addCase(fetchSubsubcategories.fulfilled, (state, action) => {
-        state.subsubcategories = action.payload;
-      });
+        .addCase(fetchSubSubCategoriesByCategoryId.pending, (state) => {
+          state.loading = true;
+          state.error = null;
+        })
+        .addCase(fetchSubSubCategoriesByCategoryId.fulfilled, (state, action) => {
+          state.loading = false;
+          state.subsubcategories = action.payload;
+        })
+        .addCase(fetchSubSubCategoriesByCategoryId.rejected, (state, action) => {
+          state.loading = false;
+          state.error = action.payload as string;
+        });
   },
 });
 

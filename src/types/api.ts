@@ -256,6 +256,7 @@ export interface ProductDTO {
   dimensions: string;
   isDeleted: boolean;
   categoryId: number;
+  subCategoryId?: number;
   subSubCategoryId?: number;
   availableStock: number;
   isInStock: boolean;

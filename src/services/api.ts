@@ -71,6 +71,8 @@ class ApiService extends BaseApiService {
   softDeleteCategory = this.categoryService.softDeleteCategory.bind(this.categoryService);
   hardDeleteCategory = this.categoryService.hardDeleteCategory.bind(this.categoryService);
   unDeleteCategory = this.categoryService.unDeleteCategory.bind(this.categoryService);
+  getSubCategoriesByCategoryId = this.categoryService.getSubCategoriesByCategoryId.bind(this.categoryService);
+  getSubSubCategoriesByCategoryId = this.categoryService.getSubSubCategoriesByCategoryId.bind(this.categoryService);
 
   // SubCategory Management
   getSubCategories = this.subCategoryService.getSubCategories.bind(this.subCategoryService);
