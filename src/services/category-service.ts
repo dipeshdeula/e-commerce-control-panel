@@ -93,6 +93,7 @@ export class CategoryService extends BaseApiService {
       const url = `${this.BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${categoryId}&pageNumber=${pageNumber}&pageSize=${pageSize}`;
       const response = await fetch(url, { headers: this.getAuthHeaders() });
       const result = await this.handleResponse<any>(response);
+      console.log(`Fetching subcategories for categoryId ${categoryId} with page ${pageNumber} and size ${pageSize}`);
       if (!result.success) {
         throw new Error(result.message || 'Failed to fetch subcategories');
       }

@@ -147,7 +147,8 @@ export class ProductService extends BaseApiService {
   }
 
   // Create new product
-  async createProduct(subSubCategoryId: number, productData: {
+async createProduct(
+  productData: {
     name: string;
     slug: string;
     description: string;
@@ -160,26 +161,37 @@ export class ProductService extends BaseApiService {
     reviews: number;
     rating: number;
     dimensions: string;
-  }) {
-    const url = `${this.BASE_URL}/products/create-product?subSubCategoryId=${subSubCategoryId}`;
+  },
+  categoryId: number,   
+  subCategoryId?: number, 
+  subSubCategoryId?: number
+) {
+
+   
+    // Build query params only for defined values
+    const queryParams: string[] = [];
+    if(categoryId > 0) queryParams.push(`categoryId=${categoryId}`);
+    if (typeof subCategoryId === 'number' && subCategoryId > 0) queryParams.push(`subCategoryId=${subCategoryId}`);
+    if (typeof subSubCategoryId === 'number' && subSubCategoryId > 0) queryParams.push(`subSubCategoryId=${subSubCategoryId}`);
+
+    console.log("query params:",queryParams);
+
+    const url = `${this.BASE_URL}/products/create-product${queryParams.length ? '?' + queryParams.join('&') : ''}`;
+    console.log("product service url:",url);
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeaders()
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(productData)
     });
     
-    const result = await this.handleResponse<ProductDTO>(response);
+    const result = await this.handleResponse<{message:string,data:ProductDTO}>(response);
+    console.log("product result",result);
     if (!result.success) {
       throw new Error(result.message || 'Failed to create product');
     }
     return result;
   }
-
-  // Update product
   async updateProduct(productId: number, productData: {
     name: string;
     slug: string;

@@ -116,7 +116,7 @@ const Products = () => {
   const [onSaleOnly, setOnSaleOnly] = useState('all');
   const [prioritizeEventProducts, setPrioritizeEventProducts] = useState('all');
   const [subCategoriesForCategory, setSubCategoriesForCategory] = useState([]);
-  const [subSubCategoriesForCategory, setSubSubCategoriesForCategory] = useState([]);
+  const [subSubCategoriesForSubCategory, setSubSubCategoriesForSubCategory] = useState([]);
 
   const queryClient = useQueryClient();
 
@@ -292,8 +292,8 @@ const Products = () => {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: (data: { subSubCategoryId: number; productData: any }) => 
-      api.createProduct(data.subSubCategoryId, data.productData),
+    mutationFn: (data: {productData: any,categoryId:number,subCategoryId:number, subSubCategoryId: number;  }) => 
+      api.createProduct(data.productData, data.categoryId, data.subCategoryId, data.subSubCategoryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsCreateOpen(false);
@@ -422,33 +422,41 @@ const Products = () => {
       name: formData.name,
       slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
       description: formData.description,
-      marketPrice: parseFloat(formData.marketPrice),
-      costPrice: parseFloat(formData.costPrice),
+      marketPrice: parseFloat(formData.marketPrice) || 0,
+      costPrice: parseFloat(formData.costPrice) || 0,
       discountPercentage: formData.discountPercentage ? parseFloat(formData.discountPercentage) : 0,
-      stockQuantity: parseInt(formData.stockQuantity),
+      stockQuantity: parseInt(formData.stockQuantity) || 0,
       sku: formData.sku,
       weight: formData.weight,
       reviews: 0,
       rating: 0,
       dimensions: formData.dimensions,
-    };
+    };          
 
+    const categoryId = Number(formData.categoryId) || 0;
+  const subCategoryId = formData.subCategoryId && Number(formData.subCategoryId) > 0
+    ? Number(formData.subCategoryId)
+    : undefined;
+  const subSubCategoryId = formData.subSubCategoryId && Number(formData.subSubCategoryId) > 0
+    ? Number(formData.subSubCategoryId)
+    : undefined;
+
+  if (!categoryId) {
+    toast({
+      title: "Error",
+      description: "Please select a category",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  if (selectedProduct) {
+    updateMutation.mutate({ id: selectedProduct.id, data: productData });
+  } else {
+    createMutation.mutate({ categoryId, subCategoryId, subSubCategoryId, productData });
+  }
+       
     
-
-    if (selectedProduct) {
-      updateMutation.mutate({ id: selectedProduct.id, data: productData });
-    } else {
-      const subSubCategoryId = parseInt(formData.subSubCategoryId);
-      if (!subSubCategoryId) {
-        toast({
-          title: "Error",
-          description: "Please select a sub-subcategory",
-          variant: "destructive",
-        });
-        return;
-      }
-      createMutation.mutate({ subSubCategoryId, productData });
-    }
   };
 
   const handleEdit = (product: ProductDTO) => {
@@ -522,19 +530,31 @@ const Products = () => {
       fetch(`${API_BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${formData.categoryId}&pageNumber=1&pageSize=100`)
         .then(res => res.json())
         .then(result => {
-          setSubCategoriesForCategory(result?.data?.subCategories || []);
+          const subCats = Array.isArray(result?.data?.subCategories) ? result.data.subCategories: [];
+          setSubCategoriesForCategory(subCats || []);
         });
-      // Fetch subsubcategories for selected category
-      fetch(`${API_BASE_URL}/category/getAllSubSubCategoryByCategoryId?categoryId=${formData.categoryId}&pageNumber=1&pageSize=100`)
-        .then(res => res.json())
-        .then(result => {
-          setSubSubCategoriesForCategory(result?.data?.subSubCategories || []);
-        });
+     
     } else {
-      setSubCategoriesForCategory([]);
-      setSubSubCategoriesForCategory([]);
+      setSubCategoriesForCategory([]);    
     }
   }, [formData.categoryId]);
+
+  useEffect(()=>{
+    if(formData.subCategoryId)
+    {
+      fetch(`${API_BASE_URL}/category/getAllSubSubCategoryBySubCategoryId?subCategoryId=${formData.subCategoryId}&pageNumber=1&pageSize=100`)
+      .then(res=>res.json())
+      .then(result=>{
+        const subSubCats = Array.isArray(result?.data?.subSubCategories) ? result.data.subSubCategories : [];
+        setSubSubCategoriesForSubCategory(subSubCats || []);
+
+      })
+    }
+  }, [formData.subCategoryId]);
+
+  console.log("Fetch SubSubCategory data by categoryId ",`${API_BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${formData.categoryId}&pageNumber=1&pageSize=100`);
+  console.log("Fetch SubSubCategory data by subCategoryId ",`${API_BASE_URL}/category/getAllSubSubCategoryBySubCategoryId?subCategoryId=${formData.subCategoryId}&pageNumber=1&pageSize=100`);
+
 
   if (isLoading) {
     return <div className="flex justify-center py-8">Loading...</div>;
@@ -602,8 +622,8 @@ const Products = () => {
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Array.isArray(categories?.data)
-                            ? categories.data.map((cat: any) => (
+                          {Array.isArray(categories?.data?.data)
+                            ? categories.data.data.map((cat: any) => (
                                 <SelectItem key={cat.id || cat.categoryId} value={(cat.id || cat.categoryId).toString()}>
                                   {cat.name} (ID: {cat.id || cat.categoryId})
                                 </SelectItem>
@@ -614,7 +634,7 @@ const Products = () => {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="subCategoryId">SubCategory</Label>
-                      <Select value={formData.subCategoryId} onValueChange={value => setFormData({ ...formData, subCategoryId: value })}>
+                      <Select value={formData.subCategoryId} onValueChange={value => setFormData({ ...formData, subCategoryId: value, subSubCategoryId: '' })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select subcategory" />
                         </SelectTrigger>
@@ -634,7 +654,7 @@ const Products = () => {
                           <SelectValue placeholder="Select sub-subcategory" />
                         </SelectTrigger>
                         <SelectContent>
-                          {subSubCategoriesForCategory.map((subsub: any) => (
+                          {subSubCategoriesForSubCategory.map((subsub: any) => (
                             <SelectItem key={subsub.id || subsub.subSubCategoryId} value={(subsub.id || subsub.subSubCategoryId).toString()}>
                               {subsub.name} (ID: {subsub.id || subsub.subSubCategoryId})
                             </SelectItem>
