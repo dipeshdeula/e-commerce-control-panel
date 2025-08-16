@@ -206,13 +206,15 @@ async createProduct(
     reviews: number;
     rating: number;
     dimensions: string;
+    categoryId?: number,
+    subCategoryId?: number,
+    subSubCategoryId?: number
   }) {
     const url = `${this.BASE_URL}/products/updateProduct?ProductId=${productId}`;
 
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
         ...this.getAuthHeaders()
       },
       body: JSON.stringify(productData)

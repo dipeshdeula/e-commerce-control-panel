@@ -475,6 +475,22 @@ const Products = () => {
       subCategoryId: product.subCategoryId?.toString() || '',
       subSubCategoryId: product.subSubCategoryId?.toString() || ''
     });
+      if (product.categoryId) {
+    fetch(`${API_BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${product.categoryId}&pageNumber=1&pageSize=100`)
+      .then(res => res.json())
+      .then(result => {
+        const subCats = Array.isArray(result?.data?.subCategories) ? result.data.subCategories : [];
+        setSubCategoriesForCategory(subCats || []);
+      });
+  }
+  if (product.subCategoryId) {
+    fetch(`${API_BASE_URL}/category/getAllSubSubCategoryBySubCategoryId?subCategoryId=${product.subCategoryId}&pageNumber=1&pageSize=100`)
+      .then(res => res.json())
+      .then(result => {
+        const subSubCats = Array.isArray(result?.data?.subSubCategories) ? result.data.subSubCategories : [];
+        setSubSubCategoriesForSubCategory(subSubCats || []);
+      });
+  }
     setIsEditOpen(true);
   };
 
@@ -972,8 +988,11 @@ const Products = () => {
               <DialogTitle>Edit Product</DialogTitle>
               <DialogDescription>Update product information</DialogDescription>
             </DialogHeader>
+            
             <div className="grid gap-4 py-4 max-h-96 overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
+
+               
                 <div className="grid gap-2">
                   <Label htmlFor="edit-name">Product Name</Label>
                   <Input
@@ -992,91 +1011,89 @@ const Products = () => {
                     required
                   />
                 </div>
+
+                
+
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="edit-subSubCategoryId">Sub-SubCategory</Label>
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ['subSubCategories'] })}
-                    disabled={subSubCategoriesLoading}
-                  >
-                    🔄 Refresh
-                  </Button>
-                </div>
-                <Popover open={openEditSubSubCategory} onOpenChange={setOpenEditSubSubCategory}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openEditSubSubCategory}
-                      className="w-full justify-between h-auto min-h-[40px] text-left"
-                      disabled={subSubCategoriesLoading}
-                    >
-                      <div className="flex flex-col items-start">
-                        {formData.subSubCategoryId
-                          ? (() => {
-                              const selectedCategory = subSubCategoriesArray.find((category) => 
-                                category?.subSubCategoryId?.toString() === formData.subSubCategoryId
-                              );
-                              return selectedCategory ? (
-                                <>
-                                  <span className="font-medium">{selectedCategory.name}</span>
-                                  <span className="text-xs text-gray-500">{selectedCategory.fullHierarchy}</span>
-                                </>
-                              ) : 'Unknown Category';
-                            })()
-                          : subSubCategoriesLoading 
-                            ? "Loading categories..." 
-                            : "Select sub-subcategory..."}
-                      </div>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[500px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Search categories..." />
-                      <CommandList>
-                        <CommandEmpty>No categories found.</CommandEmpty>
-                        <CommandGroup>
-                          {subSubCategoriesArray.filter(category => category && category.subSubCategoryId && category.name).map((category) => (
-                            <CommandItem
-                              key={category.subSubCategoryId}
-                              value={`${category.name} ${category.fullHierarchy}`}
-                              onSelect={() => {
-                                setFormData({ ...formData, subSubCategoryId: category.subSubCategoryId.toString() });
-                                setOpenEditSubSubCategory(false);
-                              }}
-                              className="flex flex-col items-start py-3"
-                            >
-                              <div className="flex items-center w-full">
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4 shrink-0",
-                                    formData.subSubCategoryId === category.subSubCategoryId.toString() ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{category.name}</span>
-                                  <span className="text-xs text-gray-500">{category.fullHierarchy}</span>
-                                </div>
-                              </div>
-                            </CommandItem>
+               <div className="grid grid-cols-3 gap-29 items-center justify-between">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-categoryId">Category</Label>
+                      <Select
+                        value={formData.categoryId}
+                        onValueChange={value => {
+                          setFormData({ ...formData, categoryId: value, subCategoryId: '', subSubCategoryId: '' });
+                          // Fetch subcategories for new category
+                          fetch(`${API_BASE_URL}/category/getAllSubCategoryByCategoryId?categoryId=${value}&pageNumber=1&pageSize=100`)
+                            .then(res => res.json())
+                            .then(result => {
+                              const subCats = Array.isArray(result?.data?.subCategories) ? result.data.subCategories : [];
+                              setSubCategoriesForCategory(subCats || []);
+                            });
+                          setSubSubCategoriesForSubCategory([]);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(categories?.data?.data)
+                            ? categories.data.data.map((cat: any) => (
+                                <SelectItem key={cat.id || cat.categoryId} value={(cat.id || cat.categoryId).toString()}>
+                                  {cat.name} (ID: {cat.id || cat.categoryId})
+                                </SelectItem>
+                              ))
+                            : null}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-subCategoryId">SubCategory</Label>
+                      <Select
+                        value={formData.subCategoryId}
+                        onValueChange={value => {
+                          setFormData({ ...formData, subCategoryId: value, subSubCategoryId: '' });
+                          // Fetch subsubcategories for new subcategory
+                          fetch(`${API_BASE_URL}/category/getAllSubSubCategoryBySubCategoryId?subCategoryId=${value}&pageNumber=1&pageSize=100`)
+                            .then(res => res.json())
+                            .then(result => {
+                              const subSubCats = Array.isArray(result?.data?.subSubCategories) ? result.data.subSubCategories : [];
+                              setSubSubCategoriesForSubCategory(subSubCats || []);
+                            });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subcategory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subCategoriesForCategory.map((sub: any) => (
+                            <SelectItem key={sub.id || sub.subCategoryId} value={(sub.id || sub.subCategoryId).toString()}>
+                              {sub.name} (ID: {sub.id || sub.subCategoryId})
+                            </SelectItem>
                           ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <p className="text-xs text-muted-foreground">
-                  {subSubCategoriesArray.length > 0 ? 
-                    `${subSubCategoriesArray.length} active categories available` : 
-                    'Loading categories...'
-                  }
-                </p>
-              </div>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2 ml-15">
+                      <Label htmlFor="edit-subSubCategoryId">Sub-SubCategory</Label>
+                      <Select
+                        value={formData.subSubCategoryId}
+                        onValueChange={value => setFormData({ ...formData, subSubCategoryId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sub-subcategory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subSubCategoriesForSubCategory.map((subsub: any) => (
+                            <SelectItem key={subsub.id || subsub.subSubCategoryId} value={(subsub.id || subsub.subSubCategoryId).toString()}>
+                              {subsub.name} (ID: {subsub.id || subsub.subSubCategoryId})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                
+            
               <div className="grid gap-2">
                 <Label htmlFor="edit-weight">Weight</Label>
                 <Input
