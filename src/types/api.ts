@@ -284,6 +284,7 @@ export interface ProductListResponse {
   data: ProductDTO[];
 }
 
+
 export interface ProductDetailResponse {
   message: string;
   data: ProductDTO;
