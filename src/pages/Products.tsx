@@ -892,7 +892,14 @@ const Products = () => {
                           <span className="text-xs text-gray-500">Discount Percentage: {product.discountPercentage} %</span>
                         </div>
                       </TableCell>
-                      <TableCell>{product.stockQuantity ?? product.stock ?? '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-500">Stock Qty: {product.stockQuantity ?? product.stock ?? '-'}</span>
+                          <span className="text-xs text-gray-500">Available Qty: {product.availableStock ?? '-'}</span>
+                          <span className="text-xs text-gray-500">Reserved Qty: {product.reservedStock ?? '-'}</span>
+                        </div>
+                      </TableCell>
+
                       <TableCell>
                         <Badge className={isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
                           {isActive ? 'Active' : 'Inactive'}

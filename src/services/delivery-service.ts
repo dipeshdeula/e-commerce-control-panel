@@ -172,7 +172,14 @@ export class DeliveryService extends BaseApiService {
       headers: this.getAuthHeaders()
     });
 
-    return this.handleResponse<DeliveryResponse>(response);
+    const result = await this.handleResponse<DeliveryResponse>(response);
+
+    if(!result.success)
+    {
+      throw new Error(result.message || 'Failed to update delivery status');
+    }
+
+    return result;
   }
 
   /**
@@ -329,6 +336,15 @@ export class DeliveryService extends BaseApiService {
       },
       body: JSON.stringify(body)
     });
+
+    if(response.success)
+    {
+      toast({
+        title: 'Success',
+        description: 'Delivery status updated successfully',
+        variant: 'success'
+      });
+    }
 
     return this.handleResponse<DeliveryResponse>(response);
   }
