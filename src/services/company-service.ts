@@ -105,7 +105,7 @@ export class CompanyService extends BaseApiService {
   // Undelete company info (restore from soft delete)
   async unDeleteCompanyInfo(id: number) {
     const response = await fetch(`${this.BASE_URL}/unDelete?Id=${id}`, {
-      method: 'PUT',
+      method: 'DELETE',
       headers: this.getAuthHeaders()
     });
     const result = await this.handleResponse<any>(response);

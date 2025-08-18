@@ -517,7 +517,6 @@ export interface CompanyInfoDTO {
   contact: string;
   registrationNumber: string;
   registeredPanNumber: string;
-  registeredVatNumber: string;
   street: string;
   city: string;
   province: string;
@@ -551,7 +550,6 @@ export interface UpdateCompanyInfoRequest {
   contact: string;
   registrationNumber: string;
   registeredPanNumber: string;
-  registeredVatNumber: string;
   street: string;
   city: string;
   province: string;

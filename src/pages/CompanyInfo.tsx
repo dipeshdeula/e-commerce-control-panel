@@ -33,8 +33,8 @@ import {
   CreditCard,
   Undo
 } from 'lucide-react';
+import { API_BASE_URL } from '@/config/api.config';
 
-const BASE_URL = 'http://110.34.2.30:5013';
 
 export const CompanyInfo: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -47,7 +47,6 @@ export const CompanyInfo: React.FC = () => {
     contact: '',
     registrationNumber: '',
     registeredPanNumber: '',
-    registeredVatNumber: '',
     street: '',
     city: '',
     province: '',
@@ -80,7 +79,6 @@ export const CompanyInfo: React.FC = () => {
         contact: '',
         registrationNumber: '',
         registeredPanNumber: '',
-        registeredVatNumber: '',
         street: '',
         city: '',
         province: '',
@@ -349,7 +347,7 @@ export const CompanyInfo: React.FC = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="registeredPanNumber">PAN Number *</Label>
+                      <Label htmlFor="registeredPanNumber">PAN / VAT Number *</Label>
                       <Input
                         id="registeredPanNumber"
                         name="registeredPanNumber"
@@ -357,17 +355,7 @@ export const CompanyInfo: React.FC = () => {
                         onChange={handleInputChange}
                         required
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="registeredVatNumber">VAT Number *</Label>
-                      <Input
-                        id="registeredVatNumber"
-                        name="registeredVatNumber"
-                        value={formData.registeredVatNumber}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
+                    </div>                   
                   </div>
                 </div>
 
@@ -430,7 +418,7 @@ export const CompanyInfo: React.FC = () => {
                         <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
                           {company.logoUrl ? (
                             <img 
-                              src={`${BASE_URL}/${company.logoUrl}`} 
+                              src={`${API_BASE_URL}/${company.logoUrl}`} 
                               alt={company.name}
                               className="w-full h-full object-cover"
                             />
@@ -484,11 +472,7 @@ export const CompanyInfo: React.FC = () => {
                           <div className="flex items-center gap-1 text-sm">
                             <CreditCard className="w-3 h-3 text-gray-400" />
                             <span className="text-xs text-gray-500">PAN:</span> {company.registeredPanNumber}
-                          </div>
-                          <div className="flex items-center gap-1 text-sm">
-                            <CreditCard className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-500">VAT:</span> {company.registeredVatNumber}
-                          </div>
+                          </div>                          
                         </div>
                       </TableCell>
                       <TableCell>
@@ -509,7 +493,6 @@ export const CompanyInfo: React.FC = () => {
                                 contact: company.contact,
                                 registrationNumber: company.registrationNumber,
                                 registeredPanNumber: company.registeredPanNumber,
-                                registeredVatNumber: company.registeredVatNumber,
                                 street: company.street,
                                 city: company.city,
                                 province: company.province,
@@ -685,7 +668,7 @@ export const CompanyInfo: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-registeredPanNumber">PAN Number *</Label>
+                  <Label htmlFor="edit-registeredPanNumber">PAN / VAT Number *</Label>
                   <Input
                     id="edit-registeredPanNumber"
                     name="registeredPanNumber"
@@ -693,17 +676,7 @@ export const CompanyInfo: React.FC = () => {
                     onChange={handleInputChange}
                     required
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-registeredVatNumber">VAT Number *</Label>
-                  <Input
-                    id="edit-registeredVatNumber"
-                    name="registeredVatNumber"
-                    value={formData.registeredVatNumber}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+                </div>               
               </div>
 
               {selectedCompany && (
