@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
     isError,
     isFetching,
   } = useGetDashboardQuery(undefined, {
-    // Production-level configurations
+  
     refetchOnFocus: true,        // Refetch when user comes back to tab
     refetchOnReconnect: true,    // Refetch when internet comes back
     pollingInterval: 30000,      // Auto-refresh every 30 seconds
@@ -82,7 +82,7 @@ const Dashboard: React.FC = () => {
   const dashboard = dashboardResponse?.data;
   console.log('Dashboard Data:', dashboard);
 
-  // 🔄 Loading State with Professional UI
+  // Loading State with Professional UI
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -118,7 +118,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // ❌ Professional Error State
+  //  Professional Error State
   if (isError || error) {
     return (
       <div className="text-center py-12">

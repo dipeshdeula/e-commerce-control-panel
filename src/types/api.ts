@@ -402,7 +402,7 @@ export interface PaymentMethodListResponse {
   data: PaymentMethodDTO[];
 }
 
-// Updated Payment Method types for new API
+// Updated Payment Method types for API
 export enum PaymentMethodType {
   DigitalPayments = 1,
   COD = 2
@@ -417,7 +417,7 @@ export interface NewPaymentMethodDTO {
   isDeleted?: boolean;
 }
 
-// Payment Request types for new API
+// Payment Request types for API
 export interface PaymentRequestDetailDTO {
   id: number;
   userId: number;
