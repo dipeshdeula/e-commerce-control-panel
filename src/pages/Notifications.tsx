@@ -95,7 +95,6 @@ export const Notifications: React.FC = () => {
         pageNumber: currentPage,
         pageSize,
         isRead: filters.isRead,
-        isAcknowledged: filters.isAcknowledged,
         userId: filters.userId,
         fromDate: filters.startDate,
         toDate: filters.endDate,
@@ -136,28 +135,7 @@ export const Notifications: React.FC = () => {
     },
   });
 
-  // Acknowledge notification mutation
-  const acknowledgeMutation = useMutation({
-    mutationFn: async (notificationId: number) => {
-      const response = await apiService.acknowledgeNotification(notificationId);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to acknowledge notification');
-      }
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast({ title: 'Notification acknowledged' });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: 'Error acknowledging notification', 
-        description: error.message, 
-        variant: 'destructive' 
-      });
-    },
-  });
-
+  
   // Send notification mutation
   const sendNotificationMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -240,13 +218,16 @@ export const Notifications: React.FC = () => {
 
 
   const notificationsArray = notifications?.notifications || [];
+  const totalItems = notifications?.meta?.totalCount || notificationsArray.length;
+  const pageSizeValue = notifications?.meta?.pageSize || pageSize;
+  const currentPageValue = notifications?.meta?.pageNumber || currentPage;
+
   console.log("notification details:",notificationsArray);
 
   if(notificationsArray.length > 0)
   {
     console.log("notification details:",notificationsArray);
   }
-  const totalItems = notifications?.meta?.totalCount || notificationsArray.length;
   console.log("total notification",totalItems)
 
   const handleViewDetails = (notification: any) => {
@@ -263,10 +244,7 @@ export const Notifications: React.FC = () => {
     markAsReadMutation.mutate(notificationId);
   };
 
-  const handleAcknowledge = (notificationId: number) => {
-    acknowledgeMutation.mutate(notificationId);
-  };
-
+ 
   const handleSendNotification = () => {
     if (!sendForm.userId || !sendForm.title || !sendForm.message) {
       toast({ 
@@ -340,19 +318,7 @@ export const Notifications: React.FC = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Acknowledgment Status</Label>
-                <Select value={filters.isAcknowledged?.toString() || 'all'} onValueChange={(value) => handleFilterChange('isAcknowledged', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="true">Acknowledged</SelectItem>
-                    <SelectItem value="false">Not Acknowledged</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+             
 
               <div className="space-y-2">
                 <Label>Sort By</Label>
@@ -421,6 +387,7 @@ export const Notifications: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
                     <SelectItem value="10">10</SelectItem>
                     <SelectItem value="25">25</SelectItem>
                     <SelectItem value="50">50</SelectItem>
@@ -471,11 +438,7 @@ export const Notifications: React.FC = () => {
                         <Badge variant={notification.isRead ? 'default' : 'secondary'} className="text-xs">
                           {notification.isRead ? 'Read' : 'Unread'}
                         </Badge>
-                        {notification.isAcknowledged && (
-                          <Badge variant="outline" className="text-xs">
-                            Acknowledged
-                          </Badge>
-                        )}
+                       
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
@@ -518,24 +481,7 @@ export const Notifications: React.FC = () => {
                           </Tooltip>
                         )}
                         
-                        {!notification.isAcknowledged && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600"
-                                onClick={() => handleAcknowledge(notification.id)}
-                                disabled={acknowledgeMutation.isPending}
-                              >
-                                <CheckCheck className="w-4 h-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Acknowledge</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
+                       
                       </div>
                     </TableCell>
                   </TableRow>
@@ -549,8 +495,46 @@ export const Notifications: React.FC = () => {
                 <p>No notifications found</p>
               </div>
             )}
+
+             {/* Pagination Controls */}
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Showing {Math.min((currentPageValue - 1) * pageSizeValue + 1, totalItems)} to{' '}
+                {Math.min(currentPageValue * pageSizeValue, totalItems)} of {totalItems} notifications
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPageValue === 1}
+                  onClick={() => setCurrentPage(currentPageValue - 1)}
+                >
+                  Previous
+                </Button>
+                {Array.from({ length: Math.ceil(totalItems / pageSizeValue) }, (_, i) => (
+                  <Button
+                    key={i + 1}
+                    variant={currentPageValue === i + 1 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPageValue === Math.ceil(totalItems / pageSizeValue)}
+                  onClick={() => setCurrentPage(currentPageValue + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        
 
         {/* Notification Details Dialog */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
@@ -577,13 +561,10 @@ export const Notifications: React.FC = () => {
                     <h3 className="font-semibold mb-2">Status</h3>
                     <div className="space-y-2 text-sm">
                       <div><span className="font-medium">Read:</span> {selectedNotification.isRead ? 'Yes' : 'No'}</div>
-                      <div><span className="font-medium">Acknowledged:</span> {selectedNotification.isAcknowledged ? 'Yes' : 'No'}</div>
                       {selectedNotification.readAt && (
                         <div><span className="font-medium">Read At:</span> {formatDate(selectedNotification.readAt)}</div>
                       )}
-                      {selectedNotification.acknowledgedAt && (
-                        <div><span className="font-medium">Acknowledged At:</span> {formatDate(selectedNotification.acknowledgedAt)}</div>
-                      )}
+                    
                     </div>
                   </div>
                 </div>
@@ -603,17 +584,7 @@ export const Notifications: React.FC = () => {
               <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
                 Close
               </Button>
-              {selectedNotification && !selectedNotification.isAcknowledged && (
-                <Button
-                  onClick={() => {
-                    handleAcknowledge(selectedNotification.id);
-                    setIsDetailsOpen(false);
-                  }}
-                  disabled={acknowledgeMutation.isPending}
-                >
-                  {acknowledgeMutation.isPending ? 'Acknowledging...' : 'Acknowledge'}
-                </Button>
-              )}
+             
             </DialogFooter>
           </DialogContent>
         </Dialog>

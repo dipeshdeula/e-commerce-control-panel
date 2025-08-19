@@ -1,30 +1,20 @@
-
-import { useState, useRef, useEffect } from 'react';
-import { Bell, MoreVertical, Check, CheckCheck, Trash2, Eye, EyeOff, Package } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { useNotifications } from '../../hooks/useNotifications';
+import { Bell, MoreVertical, Check, CheckCheck, Trash2, Eye, Package } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/hooks/useNotifications';
-import { Notification } from '@/types/api';
 import { formatDistanceToNow } from 'date-fns';
+import { useState, useRef } from 'react';
 
-interface NotificationItemProps {
-  notification: Notification;
-  onMarkAsRead: (id: number) => void;
-  onDelete: (id: number) => void;
-  onViewOrder?: (orderId: number) => void;
-}
-
-const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewOrder }: NotificationItemProps) => {
+const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewOrder }: any) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleMarkAsRead = () => {
@@ -99,8 +89,6 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewOrder }:
             </div>
           </div>
         </div>
-        
-        {/* Three-dot menu */}
         <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0">
@@ -139,8 +127,9 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete, onViewOrder }:
 };
 
 export default function NotificationDropdown() {
-  const { user } = useAuth();
-  const userId = user?.nameid ? parseInt(user.nameid, 10) : undefined;
+  // Use Redux for user info
+  const user = useSelector((state: any) => state.auth.user);
+  const userId = user?.userId ? parseInt(user.userId, 10) : undefined;
   const {
     notifications,
     unreadCount,
@@ -155,7 +144,6 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Handle scroll for pagination
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
     if (scrollHeight - scrollTop <= clientHeight + 10 && hasNextPage && !isLoading) {
@@ -172,7 +160,6 @@ export default function NotificationDropdown() {
   };
 
   const handleViewOrder = (orderId: number) => {
-    // Navigate to order details page
     window.location.href = `/orders/${orderId}`;
     setIsOpen(false);
   };
@@ -214,7 +201,6 @@ export default function NotificationDropdown() {
             </p>
           )}
         </div>
-
         <ScrollArea 
           className="max-h-96 overflow-y-auto" 
           onScrollCapture={handleScroll}
@@ -237,14 +223,12 @@ export default function NotificationDropdown() {
                   onViewOrder={handleViewOrder}
                 />
               ))}
-              
               {isLoading && (
                 <div className="p-4 text-center">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
                   <p className="text-sm text-gray-500 mt-2">Loading more notifications...</p>
                 </div>
               )}
-              
               {!hasNextPage && notifications.length > 0 && (
                 <div className="p-4 text-center">
                   <p className="text-sm text-gray-500">You've reached the end</p>

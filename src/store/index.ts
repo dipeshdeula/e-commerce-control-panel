@@ -12,11 +12,14 @@ import storeSlice from './slices/storeSlice';
 import companySlice from './slices/companySlice';
 import billingSlice from './slices/billingSlice';
 import transactionSlice from './slices/transactionSlice';
+import notificationReducer from './slices/notificationSlice';
 
 export const store = configureStore({
   reducer: {
-    // 🏭 RTK Query API slice for production dashboard
+    //  RTK Query API slice for production dashboard
+    notifications: notificationReducer,
     [adminApi.reducerPath]: adminApi.reducer,
+
     
     // Existing Redux slices
     auth: authSlice,

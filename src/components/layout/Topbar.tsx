@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Bell, Search, User, LogOut, ChevronDown, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import { logoutUser } from '@/store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '@/config/api.config';
+import NotificationDropdown from '@/components/ui/NotificationDropdown';
 
 export const Topbar: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -70,7 +70,8 @@ export const Topbar: React.FC = () => {
 
       <div className="ml-4 flex items-center md:ml-6 space-x-4">
         <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
+          {/* <Bell className="h-5 w-5" /> */}
+           <NotificationDropdown />
         </Button>
         
         <DropdownMenu>

@@ -96,10 +96,12 @@ export class NotificationService extends BaseApiService {
     return this.handleResponse<NotificationResponse>(response);
   }
 
-  async markAsRead(notificationId: number) {
-    const response = await fetch(`${this.BASE_URL}/notif/mark-as-read?notificationId=${notificationId}`, {
+  async markAsRead(notificationIds: number | number[]) {
+    const idsArray = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
+    const response = await fetch(`${this.BASE_URL}/notif/mark-as-read`, {
       method: 'POST',
-      headers: this.getAuthHeaders()
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(  idsArray )
     });
     return this.handleResponse<any>(response);
   }
