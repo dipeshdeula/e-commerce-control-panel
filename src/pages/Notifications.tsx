@@ -101,10 +101,16 @@ export const Notifications: React.FC = () => {
         toDate: filters.endDate,
         orderBy: filters.ordering,
       });
+      const data = response.data || {};
+      console.log("notification resp:",response);
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch notifications');
       }
-      return response;
+      return {
+        notifications:data.response || [],
+        meta : data.meta || {}
+
+      };
     },
   });
 
@@ -232,18 +238,16 @@ export const Notifications: React.FC = () => {
     });
   };
 
-  const getNotificationsArray = () => {
-    if (!notifications?.data) return [];
-    
-    if (Array.isArray(notifications.data)) {
-      return notifications.data;
-    }
-    
-    return [];
-  };
 
-  const notificationsArray = getNotificationsArray();
-  const totalItems = notifications?.totalCount || notificationsArray.length;
+  const notificationsArray = notifications?.notifications || [];
+  console.log("notification details:",notificationsArray);
+
+  if(notificationsArray.length > 0)
+  {
+    console.log("notification details:",notificationsArray);
+  }
+  const totalItems = notifications?.meta?.totalCount || notificationsArray.length;
+  console.log("total notification",totalItems)
 
   const handleViewDetails = (notification: any) => {
     setSelectedNotification(notification);
@@ -460,7 +464,7 @@ export const Notifications: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getNotificationTypeBadge(notification.notificationType)}
+                      {getNotificationTypeBadge(notification.type)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col space-y-1">
@@ -475,7 +479,7 @@ export const Notifications: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {formatDate(notification.createdAt)}
+                      {formatDate(notification.orderDate)}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-1">
@@ -565,8 +569,8 @@ export const Notifications: React.FC = () => {
                     <div className="space-y-2 text-sm">
                       <div><span className="font-medium">ID:</span> #{selectedNotification.id}</div>
                       <div><span className="font-medium">User:</span> User #{selectedNotification.userId}</div>
-                      <div><span className="font-medium">Type:</span> {getNotificationTypeBadge(selectedNotification.notificationType)}</div>
-                      <div><span className="font-medium">Date:</span> {formatDate(selectedNotification.createdAt)}</div>
+                      <div><span className="font-medium">Type:</span> {getNotificationTypeBadge(selectedNotification.type)}</div>
+                      <div><span className="font-medium">Date:</span> {formatDate(selectedNotification.orderDate)}</div>
                     </div>
                   </div>
                   <div>

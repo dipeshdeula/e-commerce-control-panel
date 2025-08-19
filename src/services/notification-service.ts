@@ -58,7 +58,7 @@ export interface SendNotificationResponse {
 
 export class NotificationService extends BaseApiService {
   async getAllNotifications(params?: NotificationParams) {
-    let url = `${this.BASE_URL}/notif/getAllNotifications`;
+    let url = `${this.BASE_URL}/notif/getAllNotification`;
     const searchParams = new URLSearchParams();
     
     if (params?.pageNumber) searchParams.append('pageNumber', params.pageNumber.toString());
@@ -72,8 +72,10 @@ export class NotificationService extends BaseApiService {
     }
 
     const response = await fetch(url, {
+      method:'GET',
       headers: this.getAuthHeaders()
     });
+    console.log("notification response:", response);
     return this.handleResponse<NotificationResponse>(response);
   }
 
