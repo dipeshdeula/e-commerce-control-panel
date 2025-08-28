@@ -22,7 +22,7 @@ const getApiConfig = (): ApiConfig => {
 
   // Local development API (adjust these URLs for your local setup)
   const localConfig: ApiConfig = {
-    baseUrl: 'https://localhost:7028',
+    baseUrl: ' http://192.168.1.74:5295',//'https://localhost:7028',
     apiPath: '/api'
   };
 

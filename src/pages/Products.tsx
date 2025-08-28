@@ -881,6 +881,7 @@ const Products = () => {
                   return (
                     <TableRow key={product.id} className="hover:bg-blue-50 transition-all">
                       <TableCell className="font-bold">#{product.id}</TableCell>
+                      <TableCell>{product.imageUrl}</TableCell>
                       <TableCell>{product.name || product.productName}</TableCell>
                       <TableCell>{product.sku}</TableCell>
                       <TableCell>{product.description}</TableCell>
