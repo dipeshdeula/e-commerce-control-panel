@@ -76,6 +76,7 @@ export class OrderService extends BaseApiService {
     const response = await fetch(`${this.BASE_URL}/Order/getOrderById?Id=${id}`, {
       headers: this.getAuthHeaders()
     });
+    console.log("getOrderById response", response);
     return this.handleResponse<OrderDTO[]>(response);
   }
 

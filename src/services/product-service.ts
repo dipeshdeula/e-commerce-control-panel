@@ -298,4 +298,13 @@ async createProduct(
     }
     return result;
   }
+
+  async getProductImages(productId : number)
+  {
+    const url = `${this.BASE_URL}/products/getProductImages?productId=${productId}`;
+    const response = await fetch(url,{
+      headers:this.getAuthHeaders()
+    });
+    return this.handleResponse<any>(response);
+  }
 }

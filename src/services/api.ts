@@ -105,6 +105,7 @@ class ApiService extends BaseApiService {
   softDeleteProduct = this.productService.softDeleteProduct.bind(this.productService);
   hardDeleteProduct = this.productService.hardDeleteProduct.bind(this.productService);
   unDeleteProduct = this.productService.unDeleteProduct.bind(this.productService);
+  getProductImages = this.productService.getProductImages.bind(this.productService);
 
   // Order Management
   getOrders = this.orderService.getOrders.bind(this.orderService);

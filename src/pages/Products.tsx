@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService as api } from '@/services/api';
+import { apiService as api, BASE_URL } from '@/services/api';
 import { ProductDTO, SubSubCategoryDTO } from '@/types/api';
 import {
   Card,
@@ -77,7 +77,9 @@ import {
   RotateCcw,
   AlertTriangle,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Image as ImageIcon,
+  FolderOpen
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -95,6 +97,7 @@ const Products = () => {
   const [goToPage, setGoToPage] = useState('');
   const [openSubSubCategory, setOpenSubSubCategory] = useState(false);
   const [openEditSubSubCategory, setOpenEditSubSubCategory] = useState(false);
+  const [previewImages, setPreviewImages] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -415,6 +418,8 @@ const Products = () => {
     }
   });
 
+
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -494,10 +499,18 @@ const Products = () => {
     setIsEditOpen(true);
   };
 
-  const handleImageUpload = (product: ProductDTO) => {
+  const handleImageUpload = async (product: ProductDTO) => {
     setSelectedProduct(product);
     setIsImageUploadOpen(true);
+
+    try{
+      const res = await api.getProductImages(product.id);
+      setPreviewImages(res.data || []);
+    }catch{
+      setPreviewImages([]);
+    }
   };
+
 
   const handleImageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -862,8 +875,7 @@ const Products = () => {
             <Table className="min-w-[1200px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Price</TableHead>
@@ -875,14 +887,32 @@ const Products = () => {
               </TableHeader>
               <TableBody>
                 {pagedList.map((product: any) => {                
-                  const isActive = product.statusBadge === 'ACTIVE' || product.isActive;
-                  const isOnSale = product.isOnSale;
-                  const isInStock = product.isInStock;
-                  return (
-                    <TableRow key={product.id} className="hover:bg-blue-50 transition-all">
-                      <TableCell className="font-bold">#{product.id}</TableCell>
-                      <TableCell>{product.imageUrl}</TableCell>
-                      <TableCell>{product.name || product.productName}</TableCell>
+                    const isActive = product.statusBadge === 'ACTIVE' || product.isActive;
+                    const isOnSale = product.isOnSale;
+                    const isInStock = product.isInStock;
+                    return (
+                      <TableRow key={product.id} className="hover:bg-blue-50 transition-all">
+                        
+                        <TableCell>
+                        <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                              {Array.isArray(product.images) && product.images.length > 0 && product.images[0].imageUrl ? (
+                                <img
+                                src={`${BASE_URL}/${product.images[0].imageUrl}`}
+                                alt={product.images[0].altText || product.name}
+                                className="w-full h-full rounded-lg object-cover"
+                              />
+                            ) : (
+                              <FolderOpen className="w-6 h-6 text-blue-600" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{product.name || product.ProductName}</div>
+                            <div className="text-sm text-gray-500">ID: {product.id}</div>
+                          </div>
+                        </div>
+                       
+                      </TableCell>
                       <TableCell>{product.sku}</TableCell>
                       <TableCell>{product.description}</TableCell>
                       <TableCell>
@@ -915,6 +945,14 @@ const Products = () => {
                       <TableCell>{product.pricing?.activeEventName || product.activeEventName || '-'}</TableCell>
                       <TableCell className="flex gap-2">
                         <TooltipProvider>
+                           <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" className="mr-1" onClick={() => handleImageUpload(product)}>
+                                <ImageIcon className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Upload Images</TooltipContent>
+                          </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="outline" size="sm" className="mr-1" onClick={() => handleEdit(product)}><Edit className="w-4 h-4" /></Button>
@@ -1191,6 +1229,21 @@ const Products = () => {
                 Upload images for {selectedProduct?.name}
               </DialogDescription>
             </DialogHeader>
+             {/* --- Preview Existing Images --- */}
+              {previewImages.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {previewImages.map(img => (
+                    <div key={img.imageUrl} className="flex flex-col items-center">
+                      <img
+                        src={`${API_BASE_URL}/${img.imageUrl}`}
+                        alt={img.altText || 'Product image'}
+                        className="w-20 h-20 object-cover rounded border"
+                      />
+                      <span className="text-xs mt-1">{img.altText}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="images">Select Images</Label>
