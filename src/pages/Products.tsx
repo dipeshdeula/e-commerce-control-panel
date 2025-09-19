@@ -677,10 +677,10 @@ const Products = () => {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="subSubCategoryId">Sub-SubCategory</Label>
+                      <Label htmlFor="subSubCategoryId">Brand</Label>
                       <Select value={formData.subSubCategoryId} onValueChange={value => setFormData({ ...formData, subSubCategoryId: value })}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select sub-subcategory" />
+                          <SelectValue placeholder="Select brand" />
                         </SelectTrigger>
                         <SelectContent>
                           {subSubCategoriesForSubCategory.map((subsub: any) => (

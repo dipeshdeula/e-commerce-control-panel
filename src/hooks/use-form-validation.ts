@@ -25,42 +25,37 @@ export const useFormValidation = (formData: FormData, rules: ValidationRules = {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isValid, setIsValid] = useState(false);
 
-  // Validation functions
-  const validateName = (name: string): string | undefined => {
-    if (!name.trim()) return "Name is required";
-    if (!/^[a-zA-Z\s]+$/.test(name)) return "Name must contain only alphabetic characters and spaces";
-    if (name.trim().length < 2) return "Name must be at least 2 characters long";
-    return undefined;
-  };
+const validateName = (name: string): string | undefined => {
+  if (!name.trim()) return "Name is required";
+  if (!/^[a-zA-Z]+(\s[a-zA-Z]+)*$/.test(name)) return "Name must begin with letters and can contain spaces between words";
+  if (name.trim().length < 3) return "Name must be at least 3 characters long";
+  return undefined;
+};
 
-  const validateEmail = (email: string): string | undefined => {
-    if (!email.trim()) return "Email is required";
-    if (/^\d/.test(email)) return "Email cannot start with a number";
-    const emailRegex = /^[a-zA-Z][a-zA-Z0-9._-]*@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
-    return undefined;
-  };
+const validateEmail = (email: string): string | undefined => {
+  if (!email.trim()) return "Email is required";
+  if (!email || email.trim().length < 6) return "Email must be at least 6 characters";
+  if (!/^(?=.{6,254}$)[A-Za-z]{3,}[A-Za-z0-9._%+-]*@([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/.test(email.trim()))
+    return "Email must start with at least 3 letters, contain no spaces, and have a valid domain";
+  if (/\s/.test(email)) return "Email cannot contain spaces";
+  return undefined;
+};
 
-  const validatePassword = (password: string): string | undefined => {
-    if (!password) return "Password is required";
-    if (password.length < 8) return "Password must be at least 8 characters long";
-    if (!/(?=.*[a-z])/.test(password)) return "Password must contain at least one lowercase letter";
-    if (!/(?=.*[A-Z])/.test(password)) return "Password must contain at least one uppercase letter";
-    if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(password)) return "Password must contain at least one special character";
-    return undefined;
-  };
+const validatePassword = (password: string): string | undefined => {
+  if (!password) return "Password is required";
+  if (password.length < 8) return "Password must be 8 characters long.";
+  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
+  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
+  if (!/[0-9]/.test(password)) return "Password must contain at least one digit";
+  if (!/[^a-zA-Z0-9]/.test(password)) return "Password must contain at least one special character";
+  return undefined;
+};
 
-  const validateContact = (contact: string): string | undefined => {
-    if (!contact.trim()) return "Contact number is required";
-    // Remove any spaces, dashes, or plus signs for validation
-    const cleanContact = contact.replace(/[\s\-+]/g, '');
-    
-    if (!/^\d{10}$/.test(cleanContact)) return "Contact number must be exactly 10 digits";
-    if (!cleanContact.startsWith('97') && !cleanContact.startsWith('98')) {
-      return "Contact number must start with 97 or 98";
-    }
-    return undefined;
-  };
+const validateContact = (contact: string): string | undefined => {
+  if (!contact.trim()) return "Contact is required";
+  if (!/^9[78]\d{8}$/.test(contact.trim())) return "Contact must be 10 digits and start with 97 or 98";
+  return undefined;
+};
 
   useEffect(() => {
     const newErrors: ValidationErrors = {};

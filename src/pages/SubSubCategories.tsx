@@ -48,7 +48,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-// SubSubCategories component with full pagination and CRUD functionality
+import { useSubSubCategoryValidation } from '@/hooks/use-subsubcategory-validation';
+
 export const SubSubCategories: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -67,6 +68,11 @@ export const SubSubCategories: React.FC = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { errors, isValid } = useSubSubCategoryValidation(
+    { ...formData, file: selectedFile },
+    isCreateOpen
+  );
 
   const { data: subSubCategories, isLoading } = useQuery({
     queryKey: ['subsubcategories', currentPage, pageSize],
@@ -184,6 +190,11 @@ export const SubSubCategories: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if(!isValid)
+    {
+      toast({ title: 'Validation Error', description: 'Please fix the errors in the form.', variant: 'destructive' });
+      return;
+    }
     if (selectedSubSubCategory) {
       updateMutation.mutate({
         id: selectedSubSubCategory.id,
@@ -286,21 +297,21 @@ export const SubSubCategories: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">SubSubCategories</h1>
-          <p className="text-gray-600">Manage your product sub-subcategories</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Brands</h1>
+          <p className="text-gray-600">Manage your product brands</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => resetForm()}>
               <Plus className="w-4 h-4 mr-2" />
-              Add SubSubCategory
+              Add Brand
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Create New SubSubCategory</DialogTitle>
-                <DialogDescription>Add a new sub-subcategory to your inventory</DialogDescription>
+                <DialogTitle>Create New Brand</DialogTitle>
+                <DialogDescription>Add a new brand to your inventory</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
@@ -324,8 +335,9 @@ export const SubSubCategories: React.FC = () => {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
+                    
                   />
+                  {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="slug">Slug</Label>
@@ -333,8 +345,9 @@ export const SubSubCategories: React.FC = () => {
                     id="slug"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    required
+                    
                   />
+                  {errors.slug && <p className="text-sm text-red-600 mt-1">{errors.slug}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
@@ -343,6 +356,7 @@ export const SubSubCategories: React.FC = () => {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
+                  {errors.description && <p className="text-sm text-red-600 mt-1">{errors.description}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="image">Image</Label>
@@ -352,11 +366,12 @@ export const SubSubCategories: React.FC = () => {
                     accept="image/*"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   />
+                  {errors.file && <p className="text-sm text-red-600 mt-1">{errors.file}</p>}
                 </div>
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Creating...' : 'Create SubSubCategory'}
+                  {createMutation.isPending ? 'Creating...' : 'Create Brands'}
                 </Button>
               </DialogFooter>
             </form>
@@ -366,13 +381,13 @@ export const SubSubCategories: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>SubSubCategory List</CardTitle>
+          <CardTitle>Brand List</CardTitle>
           <CardDescription>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Search className="w-4 h-4" />
                 <Input
-                  placeholder="Search sub-subcategories..."
+                  placeholder="Search brands..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="max-w-sm"
@@ -446,7 +461,7 @@ export const SubSubCategories: React.FC = () => {
                   <TableCell>
                     <TooltipProvider>
                       <div className="flex space-x-1">
-                        <Tooltip>
+                        {/* <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-50">
                               <Eye className="w-4 h-4" />
@@ -455,7 +470,7 @@ export const SubSubCategories: React.FC = () => {
                           <TooltipContent>
                             <p>View SubSubCategory Details</p>
                           </TooltipContent>
-                        </Tooltip>
+                        </Tooltip> */}
                         
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -538,11 +553,11 @@ export const SubSubCategories: React.FC = () => {
                 {subSubCategories?.data?.totalCount ? (
                   <>
                     Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to{' '}
-                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} sub-subcategories
+                    {Math.min(currentPage * pageSize, totalItems)} of {totalItems} brands
                   </>
                 ) : (
                   <>
-                    Showing {paginatedSubSubCategories.length} sub-subcategories on page {currentPage}
+                    Showing {paginatedSubSubCategories.length} brands on page {currentPage}
                     {hasMorePages ? ' (more pages available)' : ''}
                   </>
                 )}
@@ -708,8 +723,8 @@ export const SubSubCategories: React.FC = () => {
         <DialogContent>
           <form onSubmit={handleSubmit}>
             <DialogHeader>
-              <DialogTitle>Edit SubSubCategory</DialogTitle>
-              <DialogDescription>Update sub-subcategory information</DialogDescription>
+              <DialogTitle>Edit Brand</DialogTitle>
+              <DialogDescription>Update brand information</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -733,8 +748,9 @@ export const SubSubCategories: React.FC = () => {
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
+                  
                 />
+                {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-slug">Slug</Label>
@@ -742,8 +758,9 @@ export const SubSubCategories: React.FC = () => {
                   id="edit-slug"
                   value={formData.slug}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  required
+                  
                 />
+                {errors.slug && <p className="text-sm text-red-600">{errors.slug}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-description">Description</Label>
@@ -752,6 +769,7 @@ export const SubSubCategories: React.FC = () => {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
+                {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-image">Image</Label>
@@ -761,11 +779,12 @@ export const SubSubCategories: React.FC = () => {
                   accept="image/*"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 />
+                {errors.file && <p className="text-sm text-red-600">{errors.file}</p>}
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Updating...' : 'Update SubSubCategory'}
+              <Button type="submit" disabled={!isValid ||updateMutation.isPending}>
+                {updateMutation.isPending ? 'Updating...' : 'Update Brands'}
               </Button>
             </DialogFooter>
           </form>

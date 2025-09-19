@@ -54,7 +54,7 @@ const navigation = [
     children: [
       { name: 'Categories', href: '/categories', icon: FolderOpen },
       { name: 'SubCategories', href: '/subcategories', icon: FolderPlus },
-      { name: 'SubSubCategories', href: '/subsubcategories', icon: Layers },
+      { name: 'Brands', href: '/subsubcategories', icon: Layers },
       { name: 'Products', href: '/products', icon: Package2 },
     ]
   },
@@ -94,7 +94,7 @@ const navigation = [
     ]
   },
   { name: 'Company Info', href: '/company-info', icon: Building },
-  { name: 'Reports', href: '/reports', icon: FileText },
+  // { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

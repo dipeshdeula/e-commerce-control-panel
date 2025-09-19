@@ -278,7 +278,7 @@ const AppContent = () => {
           </ProtectedRoute>
         }
       />
-      <Route
+      {/* <Route
         path="/reports"
         element={
           <ProtectedRoute>
@@ -287,7 +287,7 @@ const AppContent = () => {
             </Layout>
           </ProtectedRoute>
         }
-      />
+      /> */}
       <Route
         path="/notifications"
         element={

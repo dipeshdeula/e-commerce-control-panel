@@ -160,7 +160,7 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">InstantMart Dashboard</h1>
-              <p className="text-gray-600 mt-1">Professional real-time insights powered by RTK Query</p>
+              
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -184,7 +184,7 @@ const Dashboard: React.FC = () => {
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip>
+              {/* <Tooltip>
                 <TooltipTrigger>
                   <Badge variant="secondary" className="bg-blue-50 text-blue-700">
                     <Calendar className="w-3 h-3 mr-1" />
@@ -194,7 +194,7 @@ const Dashboard: React.FC = () => {
                 <TooltipContent>
                   <p>Powered by Redux Toolkit Query for optimal caching and real-time updates</p>
                 </TooltipContent>
-              </Tooltip>
+              </Tooltip> */}
             </div>
           </div>
 

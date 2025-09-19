@@ -16,7 +16,7 @@ const getApiConfig = (): ApiConfig => {
 
   // Server/Production API
   const serverConfig: ApiConfig = {
-    baseUrl: 'http://110.34.2.30:5013',
+    baseUrl: 'http://91.98.137.107:5013',
     apiPath: ''
   };
 
@@ -40,7 +40,7 @@ export const API_CONFIG = getApiConfig();
 
 // Export the full API URL
 export const API_BASE_URL = `${API_CONFIG.baseUrl}`;
-//export const API_BASE_URL = "http://110.34.2.30:5013";
+//export const API_BASE_URL = "http://91.98.137.107:5013";
 
 
 // Helper function to get the current environment

@@ -47,6 +47,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { useSubCategoryValidation } from '@/hooks/use-subcategory-validation';
 
 export const SubCategories: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,6 +67,17 @@ export const SubCategories: React.FC = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const {errors,isValid} = useSubCategoryValidation(
+    {...formData,file:selectedFile}, isCreateOpen
+  );
+
+    const [touched,setTouched] = useState<{[key:string]:boolean}>({
+      name:false,
+      slug:false,
+      description:false,
+      file:false
+    });
 
   const { data: subCategories, isLoading } = useQuery({
     queryKey: ['subcategories', currentPage, pageSize],
@@ -182,6 +194,18 @@ export const SubCategories: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    setTouched({
+    name: true,
+    slug: true,
+    description: true,
+    categoryId: true,
+    file: true,
+  });
+  if (!isValid) {
+    toast({ title: 'Validation Error', description: 'Please fix the errors in the form.', variant: 'destructive' });
+    return;
+  }
     
     if (selectedSubCategory) {
       updateMutation.mutate({
@@ -323,8 +347,11 @@ export const SubCategories: React.FC = () => {
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
+                    onBlur={()=> setTouched({...touched,name:true})}
                   />
+                  {touched.name && errors.name && (
+                    <p className="text-red-500 text-sm">{errors.name}</p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="slug">Slug</Label>
@@ -332,8 +359,11 @@ export const SubCategories: React.FC = () => {
                     id="slug"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    required
+                    onBlur={()=> setTouched({...touched,slug:true})}
                   />
+                  {touched.slug && errors.slug && (
+                    <p className="text-red-500 text-sm">{errors.slug}</p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
@@ -341,7 +371,11 @@ export const SubCategories: React.FC = () => {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onBlur={()=> setTouched({...touched,description:true})}
                   />
+                  {touched.description && errors.description && (
+                    <p className="text-red-500 text-sm">{errors.description}</p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="image">Image</Label>
@@ -350,11 +384,15 @@ export const SubCategories: React.FC = () => {
                     type="file"
                     accept="image/*"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    onBlur={()=> setTouched({...touched,file:true})}
                   />
+                  {touched.file && errors.file && (
+                    <p className="text-red-500 text-sm">{errors.file}</p>
+                  )}
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending}>
+                <Button type="submit" disabled={!isValid || createMutation.isPending}>
                   {createMutation.isPending ? 'Creating...' : 'Create SubCategory'}
                 </Button>
               </DialogFooter>
@@ -445,7 +483,7 @@ export const SubCategories: React.FC = () => {
                   <TableCell>
                     <TooltipProvider>
                       <div className="flex space-x-1">
-                        <Tooltip>
+                        {/* <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-50">
                               <Eye className="w-4 h-4" />
@@ -454,7 +492,7 @@ export const SubCategories: React.FC = () => {
                           <TooltipContent>
                             <p>View SubCategory Details</p>
                           </TooltipContent>
-                        </Tooltip>
+                        </Tooltip> */}
                         
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -732,8 +770,11 @@ export const SubCategories: React.FC = () => {
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
+                  onBlur={() => setTouched({ ...touched, name: true })}
                 />
+                {touched.name && errors.name && (
+                  <p className="text-red-500 text-sm">{errors.name}</p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-slug">Slug</Label>
@@ -741,8 +782,12 @@ export const SubCategories: React.FC = () => {
                   id="edit-slug"
                   value={formData.slug}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  required
+                  onBlur={() => setTouched({ ...touched, slug: true })}
+                  
                 />
+                {touched.slug && errors.slug && (
+                  <p className="text-red-500 text-sm">{errors.slug}</p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-description">Description</Label>
@@ -750,7 +795,11 @@ export const SubCategories: React.FC = () => {
                   id="edit-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onBlur={() => setTouched({ ...touched, description: true })}
                 />
+                {touched.description && errors.description && (
+                  <p className="text-red-500 text-sm">{errors.description}</p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-image">Image</Label>
@@ -759,7 +808,11 @@ export const SubCategories: React.FC = () => {
                   type="file"
                   accept="image/*"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  onBlur={() => setTouched({ ...touched, file: true })}
                 />
+                {touched.file && errors.file && (
+                  <p className="text-red-500 text-sm">{errors.file}</p>
+                )}
               </div>
             </div>
             <DialogFooter>

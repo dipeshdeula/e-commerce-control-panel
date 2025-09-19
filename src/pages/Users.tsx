@@ -70,11 +70,14 @@ import {
 import { API_BASE_URL } from '@/config/api.config';
 import { NEPAL_PROVINCES, getCitiesByProvince, NEPAL_CITIES } from '@/constants/nepal-locations';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFormValidation } from '@/hooks/use-form-validation';
+import { useAddressValidation } from '@/hooks/use-address-validation';
+
 
 interface UserFormValues {
   name: string;
   email: string;
-  password?: string;
+  password: string;
   contact: string;  // Changed from phone to contact
 }
 
@@ -106,6 +109,7 @@ interface AddressFormValues {
   isDefault?: boolean;
 }
 
+
 export const Users: React.FC = () => {
   // Normalize province/city to known values so Selects bind correctly
   const normalizeProvince = (province?: string): string => {
@@ -129,6 +133,7 @@ export const Users: React.FC = () => {
   
   // Error state for component-level error handling
   const [componentError, setComponentError] = useState<string | null>(null);
+
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -169,6 +174,8 @@ export const Users: React.FC = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const {errors:addressErrors,isValid:isAddressValid,setErrors:setAddressErrors} = useAddressValidation(addressForm);
 
   // Component error boundary
   if (componentError) {
@@ -577,8 +584,25 @@ export const Users: React.FC = () => {
     }
   };
 
+    const { errors, isValid, setErrors } = useFormValidation(formData, {
+    name: true,
+    email: true,
+    password: isCreateOpen, // Only require password on create
+    contact: true,
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValid) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fix the errors in the form.',
+        variant: 'destructive',
+        duration: 4000,
+      });
+      setErrors(errors);
+      return;
+    }
     
     const userId = selectedUser?.id || selectedUser?.userId;
     if (selectedUser && userId) {
@@ -961,8 +985,9 @@ export const Users: React.FC = () => {
                       placeholder="Enter full name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
+                     
                     />
+                    {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
                   </div>
                   
                   <div className="grid gap-2">
@@ -976,8 +1001,10 @@ export const Users: React.FC = () => {
                       placeholder="Enter email address"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
+                     
                     />
+                    {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+
                   </div>
                   
                   <div className="grid gap-2">
@@ -992,8 +1019,9 @@ export const Users: React.FC = () => {
                         placeholder="Enter secure password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
+                       
                       />
+
                       <Button
                         type="button"
                         variant="ghost"
@@ -1003,6 +1031,8 @@ export const Users: React.FC = () => {
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Button>
+                      {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+
                     </div>
                   </div>
                   
@@ -1016,8 +1046,10 @@ export const Users: React.FC = () => {
                       placeholder="Enter contact number"
                       value={formData.contact}
                       onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                      required
+               
                     />
+                      {errors.contact && <p className="text-xs text-red-600 mt-1">{errors.contact}</p>}
+
                   </div>
                   
                   {/* Address excluded from registration payload by requirement */}
@@ -1027,7 +1059,7 @@ export const Users: React.FC = () => {
                   <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
+                  <Button type="submit" disabled={createMutation.isPending || !isValid}>
                     {createMutation.isPending ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -1081,7 +1113,7 @@ export const Users: React.FC = () => {
               <TableHeader>
                 <TableRow className="bg-gray-50/50">
                   <TableHead className="font-semibold">User Info</TableHead>
-                  <TableHead className="font-semibold">Role & Status</TableHead>
+                  <TableHead className="font-semibold">Role</TableHead>
                   <TableHead className="font-semibold">Contact</TableHead>
                   <TableHead className="font-semibold">Address</TableHead>
                   <TableHead className="font-semibold">Deleted</TableHead>
@@ -1155,11 +1187,11 @@ export const Users: React.FC = () => {
                             </Badge>
                             {/* Role quick-edit button removed as role update is handled elsewhere */}
                           </div>
-                          <div>
+                          {/* <div>
                             <Badge variant={user.isActive ? "default" : "secondary"} className="text-xs">
                               {user.isActive ? 'Active' : 'Inactive'}
                             </Badge>
-                          </div>
+                          </div> */}
                         </div>
                       </TableCell>
                       
@@ -1612,8 +1644,9 @@ export const Users: React.FC = () => {
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
+                  
                 />
+                 {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-email">Email</Label>
@@ -1624,6 +1657,7 @@ export const Users: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
+                 {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-password">Password (leave empty to keep current)</Label>
@@ -1644,6 +1678,7 @@ export const Users: React.FC = () => {
                   required
                 />
               </div>
+               {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
               {/* Address excluded from update payload by requirement */}
             </div>
             <DialogFooter>
@@ -1789,10 +1824,12 @@ export const Users: React.FC = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="label">Label</Label>
                   <Input id="label" value={addressForm.label} onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })} />
+                  {addressErrors.label && <p className="text-xs text-red-600 mt-1">{addressErrors.label}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="postal">Postal Code</Label>
                   <Input id="postal" value={addressForm.postalCode} onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })} />
+                  {addressErrors.postalCode && <p className="text-xs text-red-600 mt-1">{addressErrors.postalCode}</p>}
                 </div>
               </div>
 
@@ -1827,16 +1864,19 @@ export const Users: React.FC = () => {
               <div className="grid gap-2">
                 <Label htmlFor="street">Street</Label>
                 <Input id="street" value={addressForm.street} onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })} />
+                {addressErrors.street && <p className="text-xs text-red-600 mt-1">{addressErrors.street}</p>}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="lat">Latitude</Label>
                   <Input id="lat" type="number" step="any" value={addressForm.latitude ?? ''} onChange={(e) => setAddressForm({ ...addressForm, latitude: e.target.value ? Number(e.target.value) : undefined })} />
+                  {addressErrors.latitude && <p className="text-xs text-red-600 mt-1">{addressErrors.latitude}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="lng">Longitude</Label>
                   <Input id="lng" type="number" step="any" value={addressForm.longitude ?? ''} onChange={(e) => setAddressForm({ ...addressForm, longitude: e.target.value ? Number(e.target.value) : undefined })} />
+                  {addressErrors.longitude && <p className="text-xs text-red-600 mt-1">{addressErrors.longitude}</p>}
                 </div>
               </div>
 
@@ -1852,7 +1892,7 @@ export const Users: React.FC = () => {
                 setAddressForm({ label: 'home', street: '', province: '', city: '', postalCode: '', latitude: undefined, longitude: undefined, isDefault: false });
                 setAddressSelectValue('new');
               }}>Cancel</Button>
-              <Button type="submit" disabled={(addAddressMutation.isPending || updateAddressMutation.isPending) || !addressForm.street || !addressForm.province || !addressForm.city} className="bg-orange-600 hover:bg-orange-700">
+              <Button type="submit" disabled={(!(isAddressValid) ||addAddressMutation.isPending || updateAddressMutation.isPending) || !addressForm.street || !addressForm.province || !addressForm.city} className="bg-orange-600 hover:bg-orange-700">
                 {(addAddressMutation.isPending || updateAddressMutation.isPending) ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

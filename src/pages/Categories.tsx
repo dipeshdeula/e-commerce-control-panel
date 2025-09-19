@@ -59,6 +59,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useCategoryValidation } from '@/hooks/use-category-validtion';
+import { API_BASE_URL } from '@/config/api.config';
 
 export const Categories: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,6 +80,18 @@ export const Categories: React.FC = () => {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // validation
+  const {errors,isValid} = useCategoryValidation(
+    {...formData,file:imageFile}, isCreateOpen
+  );
+
+  const [touched,setTouched] = useState<{[key:string]:boolean}>({
+    name:false,
+    slug:false,
+    description:false,
+    file:false
+  });
 
   // Debounce search term
   useEffect(() => {
@@ -212,7 +226,23 @@ export const Categories: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent, isEdit: boolean = false) => {
     e.preventDefault();
+
+    setTouched({
+      name:true,
+      slug:true,
+      description:true,
+      file:true
+    })
     
+    if(!isValid)
+    {
+      toast({
+        title:'validation Error',
+        description:'please fix the errors in the form.',
+        variant: 'destructive'
+      });
+      return ;
+    }
     const submitFormData = new FormData();
     submitFormData.append('Name', formData.name);
     submitFormData.append('Slug', formData.slug);
@@ -338,9 +368,12 @@ export const Categories: React.FC = () => {
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onBlur={() => setTouched({ ...touched, name: true })}
                       placeholder="Enter category name"
-                      required
+                      
                     />
+                    {touched.name && errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="slug">Slug *</Label>
@@ -348,9 +381,12 @@ export const Categories: React.FC = () => {
                       id="slug"
                       value={formData.slug}
                       onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      onBlur={() => setTouched(t => ({ ...t, slug: true }))}
                       placeholder="category-slug"
-                      required
+                      
                     />
+                    {touched.slug && errors.slug && <p className="text-xs text-red-600 mt-1">{errors.slug}</p>}
+
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Description</Label>
@@ -358,9 +394,12 @@ export const Categories: React.FC = () => {
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onBlur={() => setTouched(t => ({ ...t, description: true }))}
                       placeholder="Describe your category"
                       rows={3}
                     />
+                    {touched.description && errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
+
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="image">Category Image</Label>
@@ -369,12 +408,14 @@ export const Categories: React.FC = () => {
                       type="file"
                       accept="image/*"
                       onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                      onBlur={() => setTouched(t => ({ ...t, file: true }))}
                       className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
+                    {touched.file && errors.file && <p className="text-xs text-red-600 mt-1">{errors.file}</p>}
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+                  <Button type="submit" disabled={!isValid || createMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
                     {createMutation.isPending ? (
                       <>
                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -452,8 +493,8 @@ export const Categories: React.FC = () => {
                         <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
                           {category.imageUrl ? (
                             <img 
-                              src={`${BASE_URL}/${category.imageUrl}`} 
-                             // src={`${category.imageUrl}`}
+                               src={`${BASE_URL}/${category.imageUrl}`} 
+                              //src={`${category.imageUrl}`}
                               alt={category.name}
                               className="w-full h-full rounded-lg object-cover"
                             />
@@ -490,7 +531,7 @@ export const Categories: React.FC = () => {
                     <TableCell>
                       <TooltipProvider>
                         <div className="flex justify-center space-x-1">
-                          <Tooltip>
+                          {/* <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-50 hover:text-gray-600">
                                 <Eye className="w-4 h-4" />
@@ -499,7 +540,7 @@ export const Categories: React.FC = () => {
                             <TooltipContent>
                               <p>View Category Details</p>
                             </TooltipContent>
-                          </Tooltip>
+                          </Tooltip> */}
                           
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -782,8 +823,9 @@ export const Categories: React.FC = () => {
                   id="edit-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
+                  
                 />
+                {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-slug">Slug *</Label>
@@ -791,8 +833,9 @@ export const Categories: React.FC = () => {
                   id="edit-slug"
                   value={formData.slug}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  required
+                  
                 />
+                {errors.slug && <p className="text-xs text-red-600 mt-1">{errors.slug}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-description">Description</Label>
@@ -802,6 +845,7 @@ export const Categories: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                 />
+                {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description}</p>}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-image">Category Image</Label>
@@ -812,10 +856,13 @@ export const Categories: React.FC = () => {
                   onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                   className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
+                {/* <img src={`${BASE_URL}/${categories.imageUrl}`} alt="Category" className="w-24 h-24 object-cover rounded-lg mt-2" />
+                {errors.file && <p className="text-xs text-red-600 mt-1">{errors.file}</p>} */}
               </div>
+              
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={updateMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" disabled={!isValid||updateMutation.isPending} className="bg-blue-600 hover:bg-blue-700">
                 {updateMutation.isPending ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
